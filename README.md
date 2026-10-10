@@ -14,7 +14,7 @@ Trabalho teórico da disciplina (enunciado em [`docs/pratica.pdf`](docs/pratica.
 | Implementação + experimentos concluídos | 25/10/2026 |
 | Revisão final do relatório e slides | 30/10/2026 |
 | **Submissão no AVA** | **01/11/2026** |
-| Seminário (40 min) | 05 e 06/11/2026 |
+| Seminário (40 min) | 11/11/2026 |
 
 ## Escopo técnico do grupo
 
