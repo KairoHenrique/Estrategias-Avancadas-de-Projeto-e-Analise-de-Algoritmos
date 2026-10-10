@@ -59,6 +59,7 @@ Trabalho teórico da disciplina (enunciado em [`docs/pratica.pdf`](docs/pratica.
 
 ## Acompanhamento
 
+- Quadro de tarefas: [GitHub Project](https://github.com/users/KairoHenrique/projects/6)
 - Todas as tasks: [issues do repositório](https://github.com/KairoHenrique/Estrategias-Avancadas-de-Projeto-e-Analise-de-Algoritmos/issues)
 - Filtrar por papel: labels `pessoa-1` a `pessoa-5`; por área: `relatorio`, `implementacao`, `seminario`
 - Prazo final: milestone [Entrega AVA - 01/11/2026](https://github.com/KairoHenrique/Estrategias-Avancadas-de-Projeto-e-Analise-de-Algoritmos/milestone/1)
