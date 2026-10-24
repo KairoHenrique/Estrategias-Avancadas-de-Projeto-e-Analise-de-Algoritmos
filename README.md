@@ -65,6 +65,10 @@ Trabalho prático e teórico da disciplina (enunciado oficial em [`docs/pratica.
 │   ├── exact/
 │   │   ├── vertex_cover.py       # Cobertura de Vértices: Força Bruta e Branch-and-Bound
 │   │   └── tsp.py                # TSP: Força Bruta e Held-Karp (Programação Dinâmica)
+│   ├── approximation/
+│   │   ├── vertex_cover.py       # APPROX-VERTEX-COVER (2-aproximação, O(|V|+|E|))
+│   │   ├── tsp.py                # APPROX-TSP-TOUR via Prim e pré-ordem (2-aproximação, Θ(V²))
+│   │   └── set_cover.py          # GREEDY-SET-COVER (H(d)-aproximação) + gerador e ótimo
 │   ├── verification/
 │   │   └── verifier.py           # Verificadores de Certificado Polinomial (O(|V|+|E|) e O(n))
 │   └── generators/
@@ -73,15 +77,21 @@ Trabalho prático e teórico da disciplina (enunciado oficial em [`docs/pratica.
 │   ├── test_generators.py        # Testes de reprodutibilidade e desigualdade triangular
 │   ├── test_vertex_cover.py      # Testes do Vertex Cover contra grafos clássicos (Petersen, Kn, Cn)
 │   ├── test_tsp.py               # Testes do TSP e equivalência estrita Força Bruta vs Held-Karp
-│   └── test_verifier.py          # Testes com certificados válidos, inválidos e subótimos
+│   ├── test_verifier.py          # Testes com certificados válidos, inválidos e subótimos
+│   ├── test_approx_vertex_cover.py # Validação de cobertura e fator 2 vs ótimo
+│   ├── test_approx_tsp.py        # Validação de Prim, pré-ordem e fator 2 euclidiano
+│   └── test_greedy_set_cover.py  # Validação de cobertura completa e fator H(d)
 ├── benchmarks/
 │   ├── benchmark_exact.py        # Medição progressiva de tempo de execução, exportação CSV e PNG
+│   ├── benchmark_approximation.py # Comparação empírica aproximado vs ótimo (CSV e PNG)
 │   ├── demo_combinatorial_explosion.py  # Script interativo de demonstração para o seminário
-│   ├── results/                  # CSVs de tempos medidos
-│   └── plots/                    # Gráficos em escala logarítmica gerados
+│   ├── results/                  # CSVs de tempos medidos e razões empíricas
+│   └── plots/                    # Gráficos em escala logarítmica e razões de aproximação
 ├── slides/
 │   ├── slides_algoritmos_exatos.md      # Slides em formato Marp para a apresentação da Pessoa 3
-│   └── roteiro_apresentacao_kairo.md   # Guia de fala cronometrado (8 minutos)
+│   ├── roteiro_apresentacao_kairo.md   # Guia de fala cronometrado da Pessoa 3 (8 minutos)
+│   ├── slides_aproximacoes.md          # Slides em formato Marp para a apresentação da Pessoa 4
+│   └── roteiro_apresentacao_heitor.md  # Guia de fala cronometrado da Pessoa 4 (8 minutos)
 ├── docs/
 │   └── pratica.pdf               # Enunciado oficial fornecido pelo professor
 ├── pyproject.toml                # Configurações do pacote Python e pytest
@@ -101,6 +111,9 @@ Trabalho prático e teórico da disciplina (enunciado oficial em [`docs/pratica.
 | **TSP (Held-Karp)** | Programação Dinâmica | $\Theta(n^2 2^n)$ | $\Theta(n^2 2^n)$ | $\Theta(n 2^n)$ | Viável até $n \approx 20$; barreira de RAM |
 | **Verificador Vertex Cover** | Certificado Polinomial | $O(\|V\| + \|E\|)$ | $O(\|V\| + \|E\|)$ | $O(\|V\|)$ | Estritamente linear em NP |
 | **Verificador TSP** | Certificado Polinomial | $O(n)$ | $O(n)$ | $O(n)$ | Linear no número de cidades |
+| **APPROX-VERTEX-COVER** | Emparelhamento Maximal | $O(\|V\| + \|E\|)$ | $O(\|V\| + \|E\|)$ | $O(\|V\|)$ | 2-aproximação polinomial (Cormen 35.1) |
+| **APPROX-TSP-TOUR** | Prim (MST) + Pré-Ordem | $\Theta(V^2)$ | $\Theta(V^2)$ | $\Theta(V)$ | 2-aproximação em TSP Métrico (Cormen 35.2) |
+| **GREEDY-SET-COVER** | Heurística Gulosa | $O(\|X\| \cdot \|F\| \cdot \min(\|X\|, \|F\|))$ | $O(\|X\| \cdot \|F\|)$ | $O(\|X\|)$ | $H(d)$-aproximação harmônica (Cormen 35.3) |
 
 ---
 
@@ -157,6 +170,16 @@ Os resultados são salvos em:
 - `benchmarks/results/tsp_benchmarks.csv`
 - `benchmarks/plots/benchmark_vertex_cover.png`
 - `benchmarks/plots/benchmark_tsp.png`
+
+Para reproduzir o estudo empírico dos algoritmos de aproximação (razão empírica vs. fator teórico do Cormen):
+
+```bash
+python benchmarks/benchmark_approximation.py
+```
+Os resultados são salvos em:
+- `benchmarks/results/approximation_ratio.csv` (dados brutos por instância)
+- `benchmarks/results/approximation_ratio_summary.csv` (médias, mínimos e máximos)
+- `benchmarks/plots/approximation_ratio.png` (gráfico comparativo dos 3 problemas)
 
 ---
 
