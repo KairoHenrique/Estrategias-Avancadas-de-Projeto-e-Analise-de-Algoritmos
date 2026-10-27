@@ -342,47 +342,27 @@ A comparação entre os métodos permite investigar se a exploração guiada por
 
 Para tornar a comparação consistente, os algoritmos são executados sobre a mesma instância e com a mesma quantidade total de avaliações da função objetivo. As sementes utilizadas são definidas explicitamente.
 
-## 8. Complexidade computacional
+### 8.1. Relação com a intratabilidade computacional
 
-A complexidade computacional depende tanto da quantidade de avaliações realizadas quanto do custo de cada avaliação da função de energia.
+O docking molecular é um problema de otimização computacionalmente desafiador, principalmente quando são consideradas a flexibilidade do ligante, a flexibilidade do receptor e a necessidade de avaliar um grande número de configurações espaciais. Os algoritmos de docking utilizam estratégias de busca e funções de pontuação para explorar e classificar possíveis poses moleculares (PAGADALA; SYED; TUSZYNSKI, 2017).
 
-Sejam:
+Em sistemas moleculares reais, encontrar uma pose favorável pode exigir a exploração de diferentes posições, orientações e conformações internas do ligante. A consideração da flexibilidade molecular amplia o espaço de busca, enquanto as funções de pontuação apresentam desafios para distinguir corretamente as configurações candidatas. Esses aspectos são discutidos em avaliações de algoritmos de docking com ligantes flexíveis (HUANG, 2018).
 
-- $A$: quantidade de avaliações da função objetivo;
-- $L$: quantidade de pontos do ligante;
-- $C$: parâmetro de complexidade da instância;
-- $N=C$: quantidade de alvos;
-- $O=2C$: quantidade de obstáculos.
+Essas dificuldades são especialmente relevantes em processos de triagem virtual de fármacos, nos quais um grande número de compostos precisa ser avaliado. Explorar todas as configurações possíveis pode exigir um custo computacional elevado. Por isso, métodos de busca aproximada e metaheurísticas podem ser utilizados para explorar o espaço de soluções sem exigir a enumeração de todas as possibilidades.
 
-Para cada ponto do ligante, a função de energia procura o alvo mais próximo, exigindo a análise dos $C$ alvos. Também verifica a distância em relação aos $2C$ obstáculos.
+A análise da complexidade computacional permite estudar como os recursos necessários à execução de um algoritmo variam em função do tamanho da entrada. Essa análise ajuda a compreender os limites de eficiência dos algoritmos e a distinguir o custo de uma implementação específica da classificação teórica de um problema computacional (CORMEN et al., 2012).
 
-Como o ligante possui quatro pontos fixos, o custo de uma avaliação cresce linearmente com $C$:
+Neste projeto, o Simulated Annealing é empregado como uma estratégia de busca probabilística. O algoritmo gera soluções candidatas, avalia suas energias e utiliza um critério de aceitação que permite, em determinadas condições, aceitar soluções piores que a atual. Esse mecanismo busca favorecer a exploração do espaço de soluções e reduzir a dependência de melhorias imediatas. Entretanto, o método não garante encontrar a solução global ótima em todas as execuções.
 
-$$
-T_{\text{energia}}(C)=O(C)
-$$
+É importante distinguir a dificuldade computacional do docking molecular real da complexidade da representação simplificada implementada neste trabalho.
 
-Consequentemente, considerando $A$ avaliações, o custo da busca é:
+No modelo proposto, a pose é representada por três variáveis contínuas: duas coordenadas de posição e um ângulo de rotação. O ligante possui quatro pontos fixos, e a função de energia considera a atração em relação aos alvos, a repulsão dos obstáculos e a penalização por ultrapassagem dos limites espaciais.
 
-$$
-T(A,C)=O(AC)
-$$
+Como o número de pontos do ligante é constante, o custo de uma avaliação da função de energia cresce linearmente com o parâmetro de complexidade da instância, resultando em um custo de busca de ordem \(O(AC)\), em que \(A\) representa o número de avaliações e \(C\) representa o parâmetro de complexidade definido neste estudo.
 
-Essa expressão considera o número de avaliações e o custo de avaliar cada pose, desconsiderando os fatores constantes associados à quantidade fixa de pontos do ligante.
+Essa expressão descreve o custo computacional da implementação analisada. Ela não demonstra que o modelo simplificado seja NP-difícil, nem permite concluir que sua resolução exija necessariamente uma quantidade exponencial de tempo.
 
-No Simulated Annealing, o cálculo da temperatura e a geração das poses candidatas possuem custo constante por iteração. No Random Search, a geração de cada pose também possui custo constante. Em ambos os métodos, o custo dominante está associado às avaliações da função objetivo.
-
-### 8.1. Relação com a intratabilidade
-
-Problemas de docking molecular real podem envolver espaços de busca complexos, múltiplos graus de liberdade, flexibilidade molecular e funções de avaliação sofisticadas. A exploração exaustiva de todas as configurações possíveis pode se tornar impraticável.
-
-Nesse contexto, metaheurísticas como Simulated Annealing são úteis porque permitem procurar boas soluções sem exigir a enumeração de todas as configurações.
-
-Entretanto, é necessário distinguir o problema real de sua representação artificial neste projeto.
-
-**A complexidade $O(AC)$ apresentada aqui descreve o custo da implementação para a representação utilizada; ela não demonstra, por si só, que o modelo simplificado é NP-difícil.** A intratabilidade de uma formulação específica exige uma justificativa teórica própria.
-
-Assim, este estudo investiga o uso de uma metaheurística em um problema de otimização inspirado em um domínio computacional complexo, sem afirmar que a versão simplificada possui uma classificação de complexidade que não foi demonstrada.
+Portanto, a relação com a intratabilidade está no contexto mais amplo do docking molecular e nas dificuldades associadas à exploração de espaços de busca complexos. O modelo implementado permite investigar experimentalmente o comportamento de uma metaheurística em um problema controlado, mas não constitui uma demonstração teórica da intratabilidade do docking molecular ou de sua própria formulação.
 
 ## 9. Metodologia experimental
 
@@ -482,3 +462,11 @@ A análise conjunta da energia, do tempo de execução e das métricas estatíst
 A comparação não pressupõe superioridade universal de uma das abordagens. As conclusões devem ser fundamentadas nos resultados experimentais, considerando tanto a qualidade das soluções quanto o custo computacional.
 
 Por fim, o projeto demonstra como uma metaheurística pode ser aplicada a um problema de otimização contínua e como uma metodologia experimental estruturada pode apoiar a análise comparativa de algoritmos.
+
+## 12. Referências
+
+HUANG, Sheng-You. Comprehensive assessment of flexible-ligand docking algorithms: current effectiveness and challenges. *Briefings in Bioinformatics*, v. 19, n. 5, p. 982–994, 2018. DOI: https://doi.org/10.1093/bib/bbx030.
+
+PAGADALA, Nataraj S.; SYED, Khajamohiddin; TUSZYNSKI, Jack. Software for molecular docking: a review. *Biophysical Reviews*, v. 9, n. 2, p. 91–102, 2017. DOI: https://doi.org/10.1007/s12551-016-0247-1.
+
+CORMEN, Thomas H.; LEISERSON, Charles E.; RIVEST, Ronald L.; STEIN, Clifford. *Algoritmos: teoria e prática*. 3. ed. Rio de Janeiro: Elsevier, 2012.
