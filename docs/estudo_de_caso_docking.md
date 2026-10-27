@@ -438,6 +438,22 @@ Os gráficos de energia permitem comparar a qualidade média das soluções conf
 
 Os arquivos gerados pelo experimento devem ser interpretados em conjunto com os parâmetros utilizados e com a metodologia descrita nesta documentação.
 
+### 9.5. Análise de custos computacionais e gargalos de execução
+
+O custo computacional dos experimentos depende tanto das características da implementação quanto dos recursos disponíveis no ambiente de execução. Neste projeto, os principais fatores considerados são a quantidade de avaliações da função objetivo, a complexidade das instâncias e o número de repetições realizadas para cada configuração experimental.
+
+A função de energia calcula as distâncias entre os pontos transformados do ligante e os alvos e obstáculos. Como o ligante possui quatro pontos fixos, o aumento da quantidade de alvos e obstáculos eleva o custo de cada avaliação. Consequentemente, execuções com orçamentos maiores e instâncias mais complexas tendem a exigir mais tempo de processamento.
+
+O Simulated Annealing e o Random Search realizam avaliações repetidas da função objetivo. Por isso, o orçamento de avaliações constitui um fator importante para o custo total dos experimentos. A realização de várias repetições também aumenta o trabalho computacional, embora seja necessária para observar a variabilidade dos resultados e comparar os algoritmos com maior consistência.
+
+Em relação ao hardware, a velocidade do processador influencia o tempo necessário para executar as operações da função objetivo e as iterações dos algoritmos. A disponibilidade de memória também pode ser relevante quando são armazenados resultados de muitas execuções ou processados conjuntos maiores de dados. Entretanto, os experimentos apresentados não incluem medições específicas de utilização da CPU ou do consumo de memória. Portanto, esses aspectos são considerados possíveis fatores de influência, e não gargalos de hardware comprovadamente identificados.
+
+A implementação utiliza Python, linguagem que oferece recursos para desenvolver algoritmos e organizar experimentos de maneira clara. Entretanto, operações executadas repetidamente em código Python podem representar um custo de desempenho, especialmente quando envolvem cálculos numéricos em grande quantidade. Neste projeto, o cálculo das distâncias e das contribuições da função de energia é uma parte relevante do trabalho realizado em cada avaliação.
+
+Uma possível otimização seria reduzir operações redundantes, utilizar estruturas de dados adequadas ou empregar bibliotecas numéricas especializadas. Contudo, qualquer alteração desse tipo deve preservar o comportamento da função objetivo e ser acompanhada de testes para garantir a equivalência dos resultados. Não foi realizada uma comparação experimental entre linguagens de programação, de modo que não é possível quantificar uma eventual vantagem de desempenho de outra linguagem neste estudo.
+
+Assim, a análise dos custos deve considerar conjuntamente o tamanho das instâncias, o orçamento de avaliações, o número de repetições, a implementação da função de energia e os recursos do ambiente de execução. Essas considerações ajudam a interpretar os tempos medidos sem atribuir diferenças observadas a causas que não foram avaliadas diretamente.
+
 ## 10. Limitações do estudo
 
 A interpretação dos resultados deve considerar as limitações do modelo:
