@@ -1,495 +1,802 @@
 import csv
+import math
+import random
+import statistics
 import sys
+import time
+
+from itertools import combinations
 from pathlib import Path
-from statistics import mean, stdev
-from time import perf_counter
 
 import matplotlib.pyplot as plt
 
 
-# ============================================================
-# CAMINHOS DO PROJETO
-# ============================================================
-
+# Permite importar os módulos de src mesmo quando o script
+# é executado diretamente a partir da pasta benchmarks.
 ROOT_DIR = Path(__file__).resolve().parents[1]
-sys.path.insert(0, str(ROOT_DIR))
+
+if str(ROOT_DIR) not in sys.path:
+    sys.path.insert(0, str(ROOT_DIR))
+
 
 from src.metaheuristics.simulated_annealing import (
     generate_docking_problem,
     simulated_annealing,
-    random_search,
+    random_search
 )
 
 
 # ============================================================
-# CONFIGURAÇÕES DO EXPERIMENTO
+# CONFIGURAÇÃO DO EXPERIMENTO
 # ============================================================
 
 COMPLEXITIES = [2, 4, 6, 8, 10]
 
 EVALUATION_BUDGETS = [
     100,
-    1_000,
-    10_000,
-    100_000,
-    1_000_000,
+    1000,
+    10000,
+    100000,
+    1000000
 ]
 
-REPETITIONS = 5
+REPETITIONS = 30
 BASE_SEED = 42
+
+# Número de amostras utilizadas no bootstrap.
+BOOTSTRAP_SAMPLES = 10000
+
+CONFIDENCE_LEVEL = 0.95
+
+# Diferenças menores que esta tolerância serão consideradas empates.
+TIE_TOLERANCE = 1e-12
+
 
 RESULTS_DIR = ROOT_DIR / "benchmarks" / "results"
 PLOTS_DIR = ROOT_DIR / "benchmarks" / "plots"
 
-CSV_PATH = RESULTS_DIR / "simulated_annealing_benchmarks.csv"
-
-ENERGY_PLOT_PATH = (
-    PLOTS_DIR / "simulated_annealing_energy.png"
+CSV_PATH = (
+    RESULTS_DIR / "simulated_annealing_benchmarks.csv"
 )
 
-RUNTIME_PLOT_PATH = (
-    PLOTS_DIR / "simulated_annealing_runtime.png"
+SUMMARY_CSV_PATH = (
+    RESULTS_DIR / "simulated_annealing_summary.csv"
+)
+
+STATISTICS_CSV_PATH = (
+    RESULTS_DIR / "simulated_annealing_statistics.csv"
 )
 
 
 # ============================================================
-# EXECUÇÃO DOS EXPERIMENTOS
+# ESTATÍSTICAS DESCRITIVAS
 # ============================================================
 
-def run_benchmarks():
+def calculate_statistics(values):
+    """Calcula a média e o desvio-padrão amostral."""
+    mean_value = statistics.mean(values)
+
+    if len(values) >= 2:
+        std_value = statistics.stdev(values)
+    else:
+        std_value = 0.0
+
+    return mean_value, std_value
+
+
+def percentile(sorted_values, probability):
+    """
+    Calcula um percentil usando interpolação linear.
+
+    probability deve estar entre 0 e 1.
+    """
+    if not sorted_values:
+        raise ValueError("A lista de valores não pode estar vazia.")
+
+    if not 0 <= probability <= 1:
+        raise ValueError("O percentil deve estar entre 0 e 1.")
+
+    position = (len(sorted_values) - 1) * probability
+
+    lower_index = math.floor(position)
+    upper_index = math.ceil(position)
+
+    if lower_index == upper_index:
+        return sorted_values[lower_index]
+
+    fraction = position - lower_index
+
+    return (
+        sorted_values[lower_index] * (1 - fraction)
+        + sorted_values[upper_index] * fraction
+    )
+
+
+# ============================================================
+# INTERVALO DE CONFIANÇA POR BOOTSTRAP PAREADO
+# ============================================================
+
+def paired_bootstrap_confidence_interval(
+    differences,
+    seed,
+    samples=BOOTSTRAP_SAMPLES,
+    confidence_level=CONFIDENCE_LEVEL
+):
+    """
+    Calcula um intervalo de confiança bootstrap para a média
+    das diferenças pareadas.
+
+    Cada diferença corresponde a:
+
+        energia do Simulated Annealing
+        menos
+        energia do Random Search
+
+    Diferenças negativas favorecem o Simulated Annealing.
+
+    O bootstrap reamostra as diferenças pareadas, preservando
+    a associação entre os resultados dos dois algoritmos.
+    """
+    if not differences:
+        raise ValueError("É necessário fornecer diferenças.")
+
+    if samples < 1:
+        raise ValueError("samples deve ser maior que zero.")
+
+    if not 0 < confidence_level < 1:
+        raise ValueError(
+            "confidence_level deve estar entre 0 e 1."
+        )
+
+    rng = random.Random(seed)
+    sample_size = len(differences)
+
+    bootstrap_means = []
+
+    for _ in range(samples):
+        resampled = [
+            differences[rng.randrange(sample_size)]
+            for _ in range(sample_size)
+        ]
+
+        bootstrap_means.append(statistics.mean(resampled))
+
+    bootstrap_means.sort()
+
+    alpha = 1 - confidence_level
+
+    lower = percentile(
+        bootstrap_means,
+        alpha / 2
+    )
+
+    upper = percentile(
+        bootstrap_means,
+        1 - alpha / 2
+    )
+
+    return lower, upper
+
+
+# ============================================================
+# TESTE BINOMIAL EXATO DOS SINAIS
+# ============================================================
+
+def exact_sign_test(wins, losses):
+    """
+    Calcula o valor-p bilateral do teste binomial exato dos sinais.
+
+    Empates são excluídos.
+
+    Hipótese nula:
+        entre as diferenças não empatadas, cada algoritmo tem
+        probabilidade de 0,5 de apresentar a menor energia.
+
+    Este teste considera a frequência das vitórias, não a
+    magnitude das diferenças.
+    """
+    n = wins + losses
+
+    if n == 0:
+        return 1.0
+
+    smaller_count = min(wins, losses)
+
+    lower_tail = sum(
+        math.comb(n, k)
+        for k in range(smaller_count + 1)
+    ) / (2 ** n)
+
+    return min(1.0, 2 * lower_tail)
+
+
+# ============================================================
+# EXECUÇÃO DO BENCHMARK
+# ============================================================
+
+def run_benchmark():
     """
     Compara Simulated Annealing e Random Search.
 
-    Os algoritmos recebem a mesma instância em cada repetição
-    e o mesmo orçamento de avaliações da função de energia.
+    Para cada complexidade e repetição, a mesma instância é
+    utilizada em todos os orçamentos de avaliações.
+
+    Os algoritmos também usam sementes próprias, reproduzíveis
+    e distintas entre si.
+
+    A análise estatística é feita separadamente para cada
+    combinação de complexidade e orçamento.
     """
+    RESULTS_DIR.mkdir(parents=True, exist_ok=True)
+    PLOTS_DIR.mkdir(parents=True, exist_ok=True)
 
-    results = []
-
-    total_experiments = (
-        len(COMPLEXITIES)
-        * len(EVALUATION_BUDGETS)
-        * REPETITIONS
-        * 2
-    )
-
-    current_experiment = 0
+    raw_results = []
 
     for complexity in COMPLEXITIES:
+        print(
+            f"\nExecutando experimentos "
+            f"com complexidade {complexity}..."
+        )
 
-        for budget in EVALUATION_BUDGETS:
+        for repetition in range(REPETITIONS):
 
-            sa_energies = []
-            sa_times = []
+            # A instância depende somente da complexidade
+            # e da repetição, nunca do orçamento.
+            problem_seed = (
+                BASE_SEED
+                + complexity * 100_000
+                + repetition
+            )
 
-            random_energies = []
-            random_times = []
+            problem = generate_docking_problem(
+                complexity=complexity,
+                seed=problem_seed
+            )
 
-            for repetition in range(REPETITIONS):
+            # Sementes próprias para cada algoritmo.
+            # Elas não dependem do orçamento, permitindo
+            # reprodutibilidade entre as configurações.
+            sa_seed = (
+                BASE_SEED
+                + complexity * 100_000
+                + repetition * 2
+                + 1
+            )
 
-                seed = (
-                    BASE_SEED
-                    + complexity * 100_000
-                    + budget
-                    + repetition
-                )
+            random_seed = (
+                BASE_SEED
+                + complexity * 100_000
+                + repetition * 2
+                + 2
+            )
 
-                # Gera a instância usada pelos dois algoritmos.
-                problem = generate_docking_problem(
-                    complexity,
-                    seed=seed,
-                )
+            for budget in EVALUATION_BUDGETS:
+                iterations = budget - 1
 
-                # ------------------------------------------------
+                # --------------------------------------------
                 # SIMULATED ANNEALING
-                # ------------------------------------------------
+                # --------------------------------------------
 
-                current_experiment += 1
-
-                print(
-                    f"[{current_experiment}/{total_experiments}] "
-                    f"Simulated Annealing | "
-                    f"complexidade={complexity} | "
-                    f"avaliações={budget:,} | "
-                    f"repetição={repetition + 1}/{REPETITIONS}",
-                    flush=True,
-                )
-
-                start = perf_counter()
+                start_sa = time.perf_counter()
 
                 sa_result = simulated_annealing(
-                    problem,
-                    iterations=budget - 1,
-                    seed=seed,
+                    problem=problem,
+                    iterations=iterations,
+                    seed=sa_seed
                 )
 
                 sa_elapsed_ms = (
-                    perf_counter() - start
+                    time.perf_counter() - start_sa
                 ) * 1000
 
-                # A função retorna um dicionário.
-                sa_energy = float(
-                    sa_result["best_energy"]
-                )
-
-                sa_evaluations = int(
-                    sa_result["evaluations"]
-                )
-
-                # Confere se o orçamento foi respeitado.
-                if sa_evaluations != budget:
-                    raise RuntimeError(
-                        "Quantidade inesperada de avaliações "
-                        "no Simulated Annealing: "
-                        f"esperado={budget}, "
-                        f"obtido={sa_evaluations}."
-                    )
-
-                sa_energies.append(sa_energy)
-                sa_times.append(sa_elapsed_ms)
-
-                # ------------------------------------------------
+                # --------------------------------------------
                 # RANDOM SEARCH
-                # ------------------------------------------------
+                # --------------------------------------------
 
-                current_experiment += 1
-
-                print(
-                    f"[{current_experiment}/{total_experiments}] "
-                    f"Random Search | "
-                    f"complexidade={complexity} | "
-                    f"avaliações={budget:,} | "
-                    f"repetição={repetition + 1}/{REPETITIONS}",
-                    flush=True,
-                )
-
-                start = perf_counter()
+                start_random = time.perf_counter()
 
                 random_result = random_search(
-                    problem,
-                    iterations=budget - 1,
-                    seed=seed,
+                    problem=problem,
+                    iterations=iterations,
+                    seed=random_seed
                 )
 
                 random_elapsed_ms = (
-                    perf_counter() - start
+                    time.perf_counter() - start_random
                 ) * 1000
 
-                # A função também retorna um dicionário.
-                random_energy = float(
-                    random_result["best_energy"]
-                )
+                # --------------------------------------------
+                # VALIDAÇÃO DO ORÇAMENTO
+                # --------------------------------------------
 
-                random_evaluations = int(
-                    random_result["evaluations"]
-                )
-
-                if random_evaluations != budget:
+                if sa_result["evaluations"] != budget:
                     raise RuntimeError(
-                        "Quantidade inesperada de avaliações "
-                        "no Random Search: "
-                        f"esperado={budget}, "
-                        f"obtido={random_evaluations}."
+                        "Simulated Annealing utilizou "
+                        f"{sa_result['evaluations']} avaliações; "
+                        f"esperado: {budget}."
                     )
 
-                random_energies.append(random_energy)
-                random_times.append(random_elapsed_ms)
+                if random_result["evaluations"] != budget:
+                    raise RuntimeError(
+                        "Random Search utilizou "
+                        f"{random_result['evaluations']} avaliações; "
+                        f"esperado: {budget}."
+                    )
 
-            # ====================================================
-            # ESTATÍSTICAS
-            # ====================================================
+                # Diferença pareada:
+                # negativa favorece SA;
+                # positiva favorece Random Search.
+                energy_difference = (
+                    sa_result["best_energy"]
+                    - random_result["best_energy"]
+                )
 
-            sa_mean_energy = mean(sa_energies)
-            random_mean_energy = mean(random_energies)
+                raw_results.append({
+                    "complexity": complexity,
+                    "budget": budget,
+                    "repetition": repetition + 1,
 
-            sa_mean_time = mean(sa_times)
-            random_mean_time = mean(random_times)
+                    "problem_seed": problem_seed,
+                    "sa_seed": sa_seed,
+                    "random_seed": random_seed,
 
-            results.append({
-                "complexity": complexity,
-                "evaluation_budget": budget,
-                "method": "Simulated Annealing",
-                "repetitions": REPETITIONS,
-                "mean_energy": sa_mean_energy,
-                "std_energy": stdev(sa_energies),
-                "mean_runtime_ms": sa_mean_time,
-                "std_runtime_ms": stdev(sa_times),
-            })
+                    "sa_best_energy": sa_result["best_energy"],
+                    "sa_evaluations": sa_result["evaluations"],
+                    "sa_elapsed_ms": sa_elapsed_ms,
 
-            results.append({
-                "complexity": complexity,
-                "evaluation_budget": budget,
-                "method": "Random Search",
-                "repetitions": REPETITIONS,
-                "mean_energy": random_mean_energy,
-                "std_energy": stdev(random_energies),
-                "mean_runtime_ms": random_mean_time,
-                "std_runtime_ms": stdev(random_times),
-            })
+                    "random_best_energy": random_result["best_energy"],
+                    "random_evaluations": random_result["evaluations"],
+                    "random_elapsed_ms": random_elapsed_ms,
 
-            # ====================================================
-            # RESUMO NO TERMINAL
-            # ====================================================
+                    "energy_difference_sa_minus_random":
+                        energy_difference
+                })
 
-            print()
-            print("=" * 65)
-            print(f"Complexidade: {complexity}")
-            print(f"Orçamento: {budget:,} avaliações")
-            print(f"Repetições: {REPETITIONS}")
-            print()
+                print(
+                    f"  Orçamento: {budget:>7} | "
+                    f"Repetição: {repetition + 1:>2}/{REPETITIONS} | "
+                    f"SA: {sa_result['best_energy']:.6f} | "
+                    f"Random: {random_result['best_energy']:.6f}"
+                )
 
-            print(
-                f"Simulated Annealing | "
-                f"Energia média: {sa_mean_energy:.6f} | "
-                f"Desvio: {stdev(sa_energies):.6f} | "
-                f"Tempo médio: {sa_mean_time:.2f} ms"
-            )
+    # Salva as execuções individuais.
+    save_raw_results(raw_results)
 
-            print(
-                f"Random Search       | "
-                f"Energia média: {random_mean_energy:.6f} | "
-                f"Desvio: {stdev(random_energies):.6f} | "
-                f"Tempo médio: {random_mean_time:.2f} ms"
-            )
+    # Calcula as estatísticas descritivas.
+    summary_results = build_summary(raw_results)
+    save_summary_results(summary_results)
 
-            print("=" * 65)
-            print()
+    # Calcula as diferenças pareadas e os testes estatísticos.
+    statistical_results = build_statistical_analysis(raw_results)
+    save_statistical_results(statistical_results)
 
-    return results
+    # Gera os gráficos.
+    for complexity in COMPLEXITIES:
+        plot_energy(summary_results, complexity)
+        plot_runtime(summary_results, complexity)
+
+    print("\nExperimento concluído!")
+    print(f"Resultados individuais: {CSV_PATH}")
+    print(f"Resumo descritivo: {SUMMARY_CSV_PATH}")
+    print(f"Análise estatística: {STATISTICS_CSV_PATH}")
+    print(f"Gráficos: {PLOTS_DIR}")
+
+    return raw_results, summary_results, statistical_results
 
 
 # ============================================================
-# SALVAR RESULTADOS EM CSV
+# SALVAMENTO DOS RESULTADOS
 # ============================================================
 
-def save_results(results):
+def save_csv(path, results):
+    """Salva uma lista de dicionários em um arquivo CSV."""
+    if not results:
+        return
 
-    RESULTS_DIR.mkdir(
-        parents=True,
-        exist_ok=True,
-    )
-
-    fieldnames = [
-        "complexity",
-        "evaluation_budget",
-        "method",
-        "repetitions",
-        "mean_energy",
-        "std_energy",
-        "mean_runtime_ms",
-        "std_runtime_ms",
-    ]
-
-    with CSV_PATH.open(
+    with path.open(
         "w",
         newline="",
-        encoding="utf-8",
-    ) as csvfile:
+        encoding="utf-8"
+    ) as csv_file:
 
         writer = csv.DictWriter(
-            csvfile,
-            fieldnames=fieldnames,
+            csv_file,
+            fieldnames=list(results[0].keys())
         )
 
         writer.writeheader()
         writer.writerows(results)
 
-    print(f"CSV salvo em: {CSV_PATH}")
+
+def save_raw_results(results):
+    """Salva os resultados individuais de todas as execuções."""
+    save_csv(CSV_PATH, results)
+
+
+def save_summary_results(summary_results):
+    """Salva as médias e os desvios-padrão."""
+    save_csv(SUMMARY_CSV_PATH, summary_results)
+
+
+def save_statistical_results(statistical_results):
+    """Salva as diferenças pareadas e a análise estatística."""
+    save_csv(STATISTICS_CSV_PATH, statistical_results)
+
+
+# ============================================================
+# RESUMO DESCRITIVO
+# ============================================================
+
+def build_summary(raw_results):
+    """
+    Agrupa os resultados por complexidade e orçamento.
+
+    Calcula médias e desvios-padrão de energia e tempo.
+    """
+    summary = []
+
+    for complexity in COMPLEXITIES:
+        for budget in EVALUATION_BUDGETS:
+
+            group = [
+                result
+                for result in raw_results
+                if (
+                    result["complexity"] == complexity
+                    and result["budget"] == budget
+                )
+            ]
+
+            if not group:
+                continue
+
+            sa_energies = [
+                result["sa_best_energy"]
+                for result in group
+            ]
+
+            random_energies = [
+                result["random_best_energy"]
+                for result in group
+            ]
+
+            sa_times = [
+                result["sa_elapsed_ms"]
+                for result in group
+            ]
+
+            random_times = [
+                result["random_elapsed_ms"]
+                for result in group
+            ]
+
+            sa_energy_mean, sa_energy_std = calculate_statistics(
+                sa_energies
+            )
+
+            random_energy_mean, random_energy_std = (
+                calculate_statistics(random_energies)
+            )
+
+            sa_time_mean, sa_time_std = calculate_statistics(
+                sa_times
+            )
+
+            random_time_mean, random_time_std = (
+                calculate_statistics(random_times)
+            )
+
+            summary.append({
+                "complexity": complexity,
+                "budget": budget,
+                "repetitions": len(group),
+
+                "sa_energy_mean": sa_energy_mean,
+                "sa_energy_std": sa_energy_std,
+
+                "random_energy_mean": random_energy_mean,
+                "random_energy_std": random_energy_std,
+
+                "sa_time_mean_ms": sa_time_mean,
+                "sa_time_std_ms": sa_time_std,
+
+                "random_time_mean_ms": random_time_mean,
+                "random_time_std_ms": random_time_std
+            })
+
+    return summary
+
+
+# ============================================================
+# ANÁLISE ESTATÍSTICA PAREADA
+# ============================================================
+
+def build_statistical_analysis(raw_results):
+    """
+    Analisa a diferença de energia entre os algoritmos.
+
+    Para cada complexidade e orçamento, calcula:
+      - média e desvio-padrão das diferenças pareadas;
+      - intervalo de confiança bootstrap de 95%;
+      - vitórias, empates e derrotas;
+      - valor-p do teste binomial exato dos sinais.
+
+    Convenção:
+      diferença = energia SA - energia Random Search.
+
+      diferença negativa favorece SA;
+      diferença positiva favorece Random Search.
+    """
+    statistical_results = []
+
+    for complexity in COMPLEXITIES:
+        for budget in EVALUATION_BUDGETS:
+
+            group = [
+                result
+                for result in raw_results
+                if (
+                    result["complexity"] == complexity
+                    and result["budget"] == budget
+                )
+            ]
+
+            if not group:
+                continue
+
+            differences = [
+                result["energy_difference_sa_minus_random"]
+                for result in group
+            ]
+
+            mean_difference, std_difference = (
+                calculate_statistics(differences)
+            )
+
+            # Para o bootstrap, a semente é fixa por configuração.
+            # Isso torna o intervalo reproduzível.
+            bootstrap_seed = (
+                BASE_SEED
+                + complexity * 100_000
+                + budget
+            )
+
+            ci_lower, ci_upper = (
+                paired_bootstrap_confidence_interval(
+                    differences=differences,
+                    seed=bootstrap_seed
+                )
+            )
+
+            sa_wins = sum(
+                difference < -TIE_TOLERANCE
+                for difference in differences
+            )
+
+            random_wins = sum(
+                difference > TIE_TOLERANCE
+                for difference in differences
+            )
+
+            ties = (
+                len(differences)
+                - sa_wins
+                - random_wins
+            )
+
+            p_value = exact_sign_test(
+                wins=sa_wins,
+                losses=random_wins
+            )
+
+            if mean_difference < 0:
+                better_mean = "Simulated Annealing"
+            elif mean_difference > 0:
+                better_mean = "Random Search"
+            else:
+                better_mean = "Empate"
+
+            # O intervalo de confiança se refere à média
+            # da diferença pareada, não a cada execução individual.
+            if ci_upper < 0:
+                ci_interpretation = (
+                    "Intervalo favorece Simulated Annealing"
+                )
+            elif ci_lower > 0:
+                ci_interpretation = (
+                    "Intervalo favorece Random Search"
+                )
+            else:
+                ci_interpretation = (
+                    "Intervalo inclui zero"
+                )
+
+            statistical_results.append({
+                "complexity": complexity,
+                "budget": budget,
+                "repetitions": len(differences),
+
+                "mean_energy_difference_sa_minus_random":
+                    mean_difference,
+
+                "std_energy_difference":
+                    std_difference,
+
+                "ci95_lower": ci_lower,
+                "ci95_upper": ci_upper,
+
+                "sa_wins": sa_wins,
+                "random_wins": random_wins,
+                "ties": ties,
+
+                "sign_test_p_value": p_value,
+
+                "better_mean_energy": better_mean,
+                "bootstrap_ci_interpretation":
+                    ci_interpretation
+            })
+
+    return statistical_results
 
 
 # ============================================================
 # GRÁFICO DE ENERGIA
 # ============================================================
 
-def plot_energy(results):
+def plot_energy(summary_results, complexity):
+    """Gera o gráfico de energia média por orçamento."""
+    data = [
+        result
+        for result in summary_results
+        if result["complexity"] == complexity
+    ]
 
-    PLOTS_DIR.mkdir(
-        parents=True,
-        exist_ok=True,
+    if not data:
+        return
+
+    budgets = [result["budget"] for result in data]
+
+    sa_means = [
+        result["sa_energy_mean"]
+        for result in data
+    ]
+
+    sa_stds = [
+        result["sa_energy_std"]
+        for result in data
+    ]
+
+    random_means = [
+        result["random_energy_mean"]
+        for result in data
+    ]
+
+    random_stds = [
+        result["random_energy_std"]
+        for result in data
+    ]
+
+    plt.figure(figsize=(10, 6))
+
+    plt.errorbar(
+        budgets,
+        sa_means,
+        yerr=sa_stds,
+        marker="o",
+        capsize=4,
+        label="Simulated Annealing"
     )
 
-    for complexity in COMPLEXITIES:
+    plt.errorbar(
+        budgets,
+        random_means,
+        yerr=random_stds,
+        marker="s",
+        capsize=4,
+        label="Random Search"
+    )
 
-        plt.figure(figsize=(9, 6))
+    plt.xscale("log")
 
-        for method in (
-            "Simulated Annealing",
-            "Random Search",
-        ):
+    plt.xlabel("Orçamento de avaliações")
+    plt.ylabel("Energia média (menor é melhor)")
 
-            selected = [
-                row
-                for row in results
-                if row["complexity"] == complexity
-                and row["method"] == method
-            ]
+    plt.title(
+        f"Energia por orçamento — complexidade {complexity}"
+    )
 
-            selected.sort(
-                key=lambda row: row["evaluation_budget"]
-            )
+    plt.grid(True, which="both", linestyle="--", alpha=0.5)
+    plt.legend()
+    plt.tight_layout()
 
-            budgets = [
-                row["evaluation_budget"]
-                for row in selected
-            ]
+    output_path = (
+        PLOTS_DIR
+        / f"simulated_annealing_energy_c{complexity}.png"
+    )
 
-            energies = [
-                row["mean_energy"]
-                for row in selected
-            ]
-
-            deviations = [
-                row["std_energy"]
-                for row in selected
-            ]
-
-            plt.errorbar(
-                budgets,
-                energies,
-                yerr=deviations,
-                marker="o",
-                capsize=4,
-                label=method,
-            )
-
-        plt.xscale("log")
-
-        plt.xlabel("Número de avaliações")
-        plt.ylabel("Energia média (menor é melhor)")
-
-        plt.title(
-            f"Energia por orçamento — complexidade {complexity}"
-        )
-
-        plt.grid(True, alpha=0.3)
-        plt.legend()
-        plt.tight_layout()
-
-        output_path = (
-            PLOTS_DIR
-            / f"simulated_annealing_energy_c{complexity}.png"
-        )
-
-        plt.savefig(
-            output_path,
-            dpi=300,
-        )
-
-        plt.close()
-
-        print(f"Gráfico de energia salvo: {output_path}")
+    plt.savefig(output_path, dpi=150)
+    plt.close()
 
 
 # ============================================================
 # GRÁFICO DE TEMPO
 # ============================================================
 
-def plot_runtime(results):
+def plot_runtime(summary_results, complexity):
+    """Gera o gráfico de tempo médio por orçamento."""
+    data = [
+        result
+        for result in summary_results
+        if result["complexity"] == complexity
+    ]
 
-    PLOTS_DIR.mkdir(
-        parents=True,
-        exist_ok=True,
+    if not data:
+        return
+
+    budgets = [result["budget"] for result in data]
+
+    sa_means = [
+        result["sa_time_mean_ms"]
+        for result in data
+    ]
+
+    sa_stds = [
+        result["sa_time_std_ms"]
+        for result in data
+    ]
+
+    random_means = [
+        result["random_time_mean_ms"]
+        for result in data
+    ]
+
+    random_stds = [
+        result["random_time_std_ms"]
+        for result in data
+    ]
+
+    plt.figure(figsize=(10, 6))
+
+    plt.errorbar(
+        budgets,
+        sa_means,
+        yerr=sa_stds,
+        marker="o",
+        capsize=4,
+        label="Simulated Annealing"
     )
 
-    for complexity in COMPLEXITIES:
+    plt.errorbar(
+        budgets,
+        random_means,
+        yerr=random_stds,
+        marker="s",
+        capsize=4,
+        label="Random Search"
+    )
 
-        plt.figure(figsize=(9, 6))
+    plt.xscale("log")
+    plt.yscale("log")
 
-        for method in (
-            "Simulated Annealing",
-            "Random Search",
-        ):
+    plt.xlabel("Orçamento de avaliações")
+    plt.ylabel("Tempo médio (ms)")
 
-            selected = [
-                row
-                for row in results
-                if row["complexity"] == complexity
-                and row["method"] == method
-            ]
+    plt.title(
+        f"Tempo de execução — complexidade {complexity}"
+    )
 
-            selected.sort(
-                key=lambda row: row["evaluation_budget"]
-            )
+    plt.grid(True, which="both", linestyle="--", alpha=0.5)
+    plt.legend()
+    plt.tight_layout()
 
-            budgets = [
-                row["evaluation_budget"]
-                for row in selected
-            ]
+    output_path = (
+        PLOTS_DIR
+        / f"simulated_annealing_runtime_c{complexity}.png"
+    )
 
-            runtimes = [
-                row["mean_runtime_ms"]
-                for row in selected
-            ]
-
-            deviations = [
-                row["std_runtime_ms"]
-                for row in selected
-            ]
-
-            plt.errorbar(
-                budgets,
-                runtimes,
-                yerr=deviations,
-                marker="o",
-                capsize=4,
-                label=method,
-            )
-
-        plt.xscale("log")
-        plt.yscale("log")
-
-        plt.xlabel("Número de avaliações")
-        plt.ylabel("Tempo médio de execução (ms)")
-
-        plt.title(
-            f"Tempo por orçamento — complexidade {complexity}"
-        )
-
-        plt.grid(True, alpha=0.3)
-        plt.legend()
-        plt.tight_layout()
-
-        output_path = (
-            PLOTS_DIR
-            / f"simulated_annealing_runtime_c{complexity}.png"
-        )
-
-        plt.savefig(
-            output_path,
-            dpi=300,
-        )
-
-        plt.close()
-
-        print(f"Gráfico de tempo salvo: {output_path}")
-
-
-# ============================================================
-# FUNÇÃO PRINCIPAL
-# ============================================================
-
-def main():
-
-    print("=" * 65)
-    print("BENCHMARK: SIMULATED ANNEALING VS. RANDOM SEARCH")
-    print("=" * 65)
-
-    print(f"Complexidades: {COMPLEXITIES}")
-    print(f"Orçamentos: {EVALUATION_BUDGETS}")
-    print(f"Repetições por configuração: {REPETITIONS}")
-    print()
-
-    results = run_benchmarks()
-
-    save_results(results)
-    plot_energy(results)
-    plot_runtime(results)
-
-    print()
-    print("=" * 65)
-    print("EXPERIMENTO CONCLUÍDO!")
-    print("=" * 65)
+    plt.savefig(output_path, dpi=150)
+    plt.close()
 
 
 if __name__ == "__main__":
-    main()
+    run_benchmark()
