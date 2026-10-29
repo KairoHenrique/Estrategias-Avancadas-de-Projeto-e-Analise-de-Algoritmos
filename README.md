@@ -82,6 +82,10 @@ Trabalho prático e teórico da disciplina (enunciado oficial em [`docs/pratica.
 ├── slides/
 │   ├── slides_algoritmos_exatos.md      # Slides em formato Marp para a apresentação da Pessoa 3
 │   └── roteiro_apresentacao_kairo.md   # Guia de fala cronometrado (8 minutos)
+├── relatorio/
+│   ├── main.tex                  # Relatório técnico em formato IEEE (IEEEtran, algorithm2e, TikZ)
+│   ├── referencias.bib           # Base bibliográfica BibTeX no padrão IEEEtran
+│   └── main.pdf                  # Versão compilada do relatório técnico
 ├── docs/
 │   └── pratica.pdf               # Enunciado oficial fornecido pelo professor
 ├── pyproject.toml                # Configurações do pacote Python e pytest
@@ -173,6 +177,22 @@ O script exibirá:
 2. Execução progressiva ao vivo demonstrando a aceleração do Held-Karp (>160x mais rápido que força bruta para $n=10$) e o congelamento da força bruta.
 3. Demonstração dos verificadores polinomiais rodando em microssegundos ($O(n)$ e $O(|V| + |E|)$).
 4. Explicação do estudo de caso real de *Molecular Docking* e triagem virtual de fármacos.
+
+---
+
+## Compilação do Relatório Técnico (LaTeX)
+
+O relatório técnico-científico encontra-se na pasta [`relatorio/`](relatorio/), formatado no padrão IEEE (`IEEEtran`), com suporte ao pacote `algorithm2e`, diagramas em `TikZ` e bibliografia `BibTeX` (`relatorio/referencias.bib`).
+
+Para compilar e gerar o arquivo `relatorio/main.pdf`:
+
+```bash
+cd relatorio
+pdflatex main.tex
+bibtex main
+pdflatex main.tex
+pdflatex main.tex
+```
 
 ---
 

@@ -1,0 +1,517 @@
+\documentclass[conference]{IEEEtran}
+
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage[brazilian]{babel}
+\usepackage{microtype}
+
+\usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage{amsthm}
+
+\theoremstyle{definition}
+\newtheorem{definicao}{Definição}
+
+\theoremstyle{plain}
+\newtheorem{teorema}{Teorema}
+\newtheorem{lema}{Lema}
+
+\usepackage[portuguese,ruled,vlined,linesnumbered]{algorithm2e}
+\DontPrintSemicolon
+\SetKwInput{KwIn}{Entrada}
+\SetKwInput{KwOut}{Saída}
+
+\usepackage{graphicx}
+\usepackage{booktabs}
+\usepackage{array}
+\usepackage{xcolor}
+\usepackage{tikz}
+\usetikzlibrary{arrows.meta, positioning, shapes.geometric}
+\usepackage[colorlinks=true, linkcolor=blue!60!black, citecolor=blue!60!black, urlcolor=blue!70!black]{hyperref}
+
+\title{Problemas NP-Completos e Aproximações: Fundamentação, Algoritmos Exatos, Aproximados e Metaheurísticas em \textit{Molecular Docking}}
+
+\author{
+\IEEEauthorblockN{Igor, Maria Eduarda, Kairo Henrique, Heitor Henrique e Jade Souza}
+\IEEEauthorblockA{Departamento de Computação e Mecânica (DECOM-DV) -- CEFET-MG, Divinópolis, MG \\
+Estratégias Avançadas de Projeto e Análise de Algoritmos (Prof. Michel Pires da Silva)}
+}
+
+\begin{document}
+
+\maketitle
+
+\begin{abstract}
+Este trabalho estuda os problemas NP-Completos e os métodos usados para lidar com o alto custo computacional de resolvê-los, tendo como base os Capítulos 34 e 35 do livro de Cormen et al. Na parte teórica, são apresentadas as classes P, NP, NP-Difícil e NP-Completo, a verificação em tempo polinomial por certificados, a discussão sobre $\text{P} \neq \text{NP}$, as reduções polinomiais ($\text{CIRCUIT-SAT} \le_P \text{SAT} \le_P \text{3-CNF-SAT} \le_P \text{CLIQUE} \le_P \text{VERTEX-COVER} \le_P \text{HAM-CYCLE} \le_P \text{TSP}$) e o cálculo da explosão combinatória. Na parte prática, são comparadas três estratégias implementadas em Python: algoritmos exatos (Força Bruta, \textit{Branch-and-Bound} e Held-Karp), algoritmos de aproximação (\texttt{APPROX-VERTEX-COVER}, \texttt{APPROX-TSP-TOUR} e \texttt{GREEDY-SET-COVER}) e a metaheurística \textit{Simulated Annealing} aplicada a um modelo simplificado de \textit{Molecular Docking}.
+\end{abstract}
+
+\begin{IEEEkeywords}
+NP-Completude, Reduções Polinomiais, Explosão Combinatória, Algoritmos de Aproximação, \textit{Simulated Annealing}.
+\end{IEEEkeywords}
+
+% ==========================================================================
+% SEÇÃO I - INTRODUÇÃO
+% ==========================================================================
+\section{Introdução}
+\label{sec:introducao}
+
+Vários problemas clássicos de grafos possuem algoritmos exatos e rápidos. Para achar o menor caminho entre dois vértices com pesos não negativos, o algoritmo de Dijkstra resolve o problema em tempo $O(|E| + |V|\log|V|)$. Para conectar todos os vértices com o menor peso total de arestas, Prim e Kruskal encontram a Árvore Geradora Mínima em $O(|E|\log|V|)$ \cite{cormen2012algoritmos}. Nesses casos, o tempo de execução cresce de forma polinomial e permite processar grafos grandes em poucos segundos.
+
+Por outro lado, existem problemas parecidos que não têm algoritmo eficiente conhecido. Se mudarmos o problema de caminhos mínimos para obrigar que a rota passe por todas as $n$ cidades exatamente uma vez e volte ao início com o menor custo, temos o Problema do Caixeiro-Viajante (\textit{Traveling Salesperson Problem} -- TSP). Situação parecida acontece na Cobertura de Vértices (\textit{Vertex Cover}), em que buscamos o menor conjunto de vértices que cubra todas as arestas do grafo, na Cobertura de Conjuntos (\textit{Set Cover}) e no problema de encaixe molecular (\textit{Molecular Docking}) \cite{pagadala2017software,huang2018comprehensive}, onde se busca a posição e a rotação de uma molécula que minimizem a energia de ligação com uma proteína.
+
+Na década de 1970, Cook \cite{cook1971complexity}, Karp \cite{karp1972reducibility} e Levin \cite{levin1973universal} provaram que esses problemas pertencem à classe NP-Completo (na forma de decisão) ou NP-Difícil (na forma de otimização). Todos eles são ligados por reduções em tempo polinomial: se alguém achar um algoritmo polinomial para um deles, todos os outros também terão solução polinomial.
+
+Como não se conhece algoritmo polinomial para nenhum problema NP-Completo, achar a solução ótima exata exige testar um número de combinações que cresce de forma exponencial ($2^n$ subconjuntos na Cobertura de Vértices) ou fatorial ($(n-1)!/2$ rotas no TSP simétrico). Com $n = 100$ cidades no TSP, existem cerca de $4{,}66 \times 10^{155}$ rotas, o que torna a busca exata inviável mesmo nos computadores mais rápidos.
+
+Para contornar esse limite na prática, costumam ser usadas três abordagens:
+\begin{enumerate}
+    \item \textit{Algoritmos exatos com poda ou programação dinâmica:} métodos como \textit{Branch-and-Bound} e Held-Karp \cite{held1962dynamic} cortam buscas repetidas e acham o valor ótimo para entradas pequenas ($n \le 20$), mas ainda sofrem com tempo exponencial e falta de memória RAM.
+    \item \textit{Algoritmos de aproximação:} algoritmos polinomiais (Cap. 35 de Cormen et al. \cite{cormen2012algoritmos}) que entregam uma solução próxima da ótima com um limite matemático de erro $\rho(n)$.
+    \item \textit{Metaheurísticas:} buscas probabilísticas como o \textit{Simulated Annealing} \cite{kirkpatrick1983optimization,metropolis1953equation}, usadas em problemas contínuos ou com muitos mínimos locais, onde não há garantia teórica de erro, mas busca-se uma boa solução dentro de um número fixo de avaliações.
+\end{enumerate}
+
+O objetivo deste trabalho é estudar a base teórica da NP-Completude e comparar na prática o tempo de execução e a qualidade das soluções dessas três abordagens. Os objetivos específicos são: (i) apresentar as classes P, NP, NP-Difícil e NP-Completo, os verificadores polinomiais e a questão $\text{P} \neq \text{NP}$; (ii) demonstrar as reduções da cadeia $\text{CIRCUIT-SAT} \le_P \text{SAT} \le_P \text{3-CNF-SAT} \le_P \text{CLIQUE} \le_P \text{VERTEX-COVER} \le_P \text{HAM-CYCLE} \le_P \text{TSP}$ e o crescimento de $2^n$ e $(n-1)!/2$; (iii) implementar soluções exatas e verificadores para TSP e Cobertura de Vértices; (iv) implementar os algoritmos de aproximação do Capítulo 35 e medir suas razões de aproximação; e (v) aplicar o \textit{Simulated Annealing} ao estudo de caso inspirado em \textit{Molecular Docking}.
+
+O restante do texto está dividido da seguinte forma: a Seção \ref{sec:fundamentacao} traz a fundamentação teórica; a Seção \ref{sec:paradigma} apresenta os pseudocódigos e diagramas dos algoritmos; a Seção \ref{sec:analise} faz a análise assintótica de tempo e espaço e as provas de aproximação; a Seção \ref{sec:estudo_de_caso} mostra a implementação e os testes; a Seção \ref{sec:conclusao} resume as conclusões; e o Apêndice traz o guia rápido (\textit{Cheat Sheet}).
+
+% ==========================================================================
+% SEÇÃO II - FUNDAMENTAÇÃO TEÓRICA
+% ==========================================================================
+\section{Fundamentação Teórica}
+\label{sec:fundamentacao}
+
+\subsection{Problemas de Decisão e de Otimização}
+
+Na prática, problemas como o TSP ou a Cobertura de Vértices são de otimização, pois pedem o menor custo ou o menor conjunto possível. Porém, a teoria da NP-Completude do Capítulo 34 de Cormen et al. \cite{cormen2012algoritmos} trabalha com \textbf{problemas de decisão}, cuja resposta é apenas \texttt{SIM} ($1$) ou \texttt{NÃO} ($0$).
+
+Todo problema de otimização pode ser transformado em um problema de decisão colocando um limite $k$ sobre o valor buscado:
+\begin{itemize}
+    \item \texttt{VERTEX-COVER}: dado um grafo não dirigido $G = (V, E)$ e um inteiro $k$, existe uma cobertura de vértices em $G$ de tamanho no máximo $k$?
+    \item \texttt{TSP}: dado um grafo completo $G = (V, E)$, os custos das arestas $c(i, j) \ge 0$ e um inteiro $k$, existe um ciclo hamiltoniano em $G$ com custo total no máximo $k$?
+\end{itemize}
+
+Se fosse possível resolver a versão de otimização em tempo polinomial, bastaria achar o valor ótimo $C^*$ e comparar se $C^* \le k$ em $O(1)$ para responder ao problema de decisão. Logo, se o problema de decisão já for difícil, o de otimização é pelo menos tão difícil quanto ele. No livro, cada instância é codificada como uma cadeia binária $x \in \{0,1\}^*$, e o problema de decisão é visto como uma linguagem $L \subseteq \{0,1\}^*$ formada pelas entradas $x$ que têm resposta \texttt{SIM} ($x \in L$).
+
+\subsection{Classes $\text{P}$ e $\text{NP}$, Certificados e Verificadores}
+
+\begin{definicao}[Classe $\text{P}$ \cite{cormen2012algoritmos}]
+A classe $\text{P}$ é o conjunto das linguagens $L \subseteq \{0,1\}^*$ que podem ser decididas por um algoritmo determinístico em tempo polinomial $O(n^k)$, onde $n = |x|$ é o tamanho da entrada e $k$ é uma constante.
+\end{definicao}
+
+Já a classe $\text{NP}$ (\textit{tempo polinomial não determinístico}) reúne os problemas cuja solução pode ser verificada em tempo polinomial.
+
+\begin{definicao}[Verificador e Classe $\text{NP}$ \cite{cormen2012algoritmos}]
+Um algoritmo de verificação $A(x, y)$ recebe a instância $x$ e uma cadeia binária $y$ chamada \textbf{certificado}. Uma linguagem $L$ pertence a $\text{NP}$ se existe um verificador de tempo polinomial $A$ e uma constante $c$ tais que:
+\begin{equation}
+L = \{ x \in \{0,1\}^* : \exists y \text{ com } |y| = O(|x|^c) \text{ e } A(x, y) = 1 \}.
+\label{eq:def_np}
+\end{equation}
+\end{definicao}
+
+Nos algoritmos implementados em \texttt{src/verification/verifier.py}, isso fica claro:
+\begin{itemize}
+    \item Em \texttt{VERTEX-COVER}, o certificado é o subconjunto de vértices $V' \subseteq V$. O verificador confere se $|V'| \le k$ e percorre as arestas $(u, v) \in E$ checando se $u \in V'$ ou $v \in V'$, gastando tempo $O(|V| + |E|)$.
+    \item Em \texttt{TSP}, o certificado é a sequência de $n$ vértices do ciclo. O verificador checa em $O(n)$ se todos os vértices aparecem uma única vez e se a soma dos pesos das arestas é menor ou igual a $k$.
+\end{itemize}
+
+Como qualquer problema em $\text{P}$ já pode ser resolvido do zero em tempo polinomial sem precisar ler o certificado $y$, vale que $\text{P} \subseteq \text{NP}$.
+
+\subsection{Reduções, $\text{NP-Difícil}$ e $\text{NP-Completo}$}
+
+\begin{definicao}[Redução em Tempo Polinomial \cite{cormen2012algoritmos}]
+Uma linguagem $L_1$ é redutível em tempo polinomial a $L_2$ ($L_1 \le_P L_2$) se existe uma função $f : \{0,1\}^* \to \{0,1\}^*$ calculável em tempo polinomial tal que, para todo $x \in \{0,1\}^*$:
+\begin{equation}
+x \in L_1 \iff f(x) \in L_2.
+\end{equation}
+\end{definicao}
+
+\begin{figure}[htbp]
+\centering
+\resizebox{\columnwidth}{!}{%
+\begin{tikzpicture}[
+    node distance=0.8cm,
+    box/.style={rectangle, draw=blue!70!black, fill=blue!5, thick, minimum width=2.3cm, minimum height=0.85cm, align=center, rounded corners=2pt, font=\footnotesize},
+    alg/.style={rectangle, draw=black!80, fill=gray!10, thick, minimum width=2.5cm, minimum height=0.85cm, align=center, rounded corners=2pt, font=\footnotesize},
+    arrow/.style={-{Stealth[length=2mm]}, thick}
+]
+    \node[box] (x) {Instância $x$\\de $L_1$};
+    \node[alg, right=0.5cm of x] (f) {Redução $F$\\calcula $f(x)$};
+    \node[box, right=0.5cm of f] (fx) {Instância $f(x)$\\de $L_2$};
+    \node[alg, below=0.65cm of fx] (a2) {Algoritmo $A_2$\\decide $L_2$};
+    \node[box, fill=green!10, draw=green!60!black, left=0.7cm of a2] (ans) {Saída de $A_1$:\\$1$ ou $0$};
+
+    \draw[arrow] (x) -- (f);
+    \draw[arrow] (f) -- (fx);
+    \draw[arrow] (fx) -- (a2);
+    \draw[arrow] (a2) -- (ans);
+\end{tikzpicture}%
+}
+\caption{Ideia da redução polinomial $L_1 \le_P L_2$ (Figura 34.5 de Cormen et al. \cite{cormen2012algoritmos}).}
+\label{fig:reducao_fluxo}
+\end{figure}
+
+\begin{lema}[Lema 34.3 de Cormen et al. \cite{cormen2012algoritmos}]
+\label{lema:l1_l2_p}
+Se $L_1, L_2 \subseteq \{0,1\}^*$ são tais que $L_1 \le_P L_2$, então $L_2 \in \text{P} \implies L_1 \in \text{P}$.
+\end{lema}
+
+\begin{proof}
+Sejam $A_2$ um algoritmo que decide $L_2$ em $O(|y|^k)$ e $F$ o algoritmo de redução que gera $y = f(x)$ em $O(|x|^c)$ (Figura \ref{fig:reducao_fluxo}). Como $F$ dá no máximo $O(|x|^c)$ passos, o tamanho de $y$ é $|y| = O(|x|^c)$. Assim, $A_2(f(x))$ roda em tempo $O((|x|^c)^k) = O(|x|^{ck})$, e o algoritmo composto $A_1$ decide $L_1$ em tempo polinomial.
+\end{proof}
+
+\begin{definicao}[$\text{NP-Completo}$ e $\text{NP-Difícil}$ \cite{cormen2012algoritmos}]
+Uma linguagem $L \subseteq \{0,1\}^*$ é \textbf{NP-Completa} ($\text{NPC}$) se: (1) $L \in \text{NP}$; e (2) $L' \le_P L$ para todo $L' \in \text{NP}$. Se $L$ cumpre a condição 2 mas não precisa estar em $\text{NP}$, dizemos que $L$ é \textbf{NP-Difícil}.
+\end{definicao}
+
+\begin{teorema}[Teorema 34.4 de Cormen et al. \cite{cormen2012algoritmos}]
+\label{teo:p_igual_np}
+Se algum problema NP-Completo é resolvível em tempo polinomial, então $\text{P} = \text{NP}$. De modo equivalente, se algum problema em $\text{NP}$ não está em $\text{P}$, então nenhum problema NP-Completo pode ser resolvido em tempo polinomial.
+\end{teorema}
+
+\begin{proof}
+Suponha que exista $L \in \text{NPC}$ tal que $L \in \text{P}$. Para qualquer $L' \in \text{NP}$, temos $L' \le_P L$ pela propriedade 2 de $\text{NPC}$. Pelo Lema \ref{lema:l1_l2_p}, $L \in \text{P}$ implica $L' \in \text{P}$. Logo, $\text{NP} \subseteq \text{P}$, e como $\text{P} \subseteq \text{NP}$, segue que $\text{P} = \text{NP}$. A segunda parte do enunciado é a contrapositiva da primeira.
+\end{proof}
+
+\begin{figure}[htbp]
+\centering
+\begin{tikzpicture}[scale=0.8]
+    \draw[thick, fill=blue!6, draw=blue!70!black] (0, 0.2) ellipse (2.5cm and 1.8cm);
+    \node[blue!70!black, font=\small\bfseries] at (-1.9, 0.1) {$\text{NP}$};
+    \draw[thick, fill=green!12, draw=green!60!black] (0, -0.7) ellipse (1.25cm and 0.68cm);
+    \node[green!50!black, font=\small\bfseries] at (0, -0.7) {$\text{P}$};
+    \draw[thick, fill=red!10, fill opacity=0.6, draw=red!70!black] (0, 1.8) ellipse (2.0cm and 1.1cm);
+    \node[red!70!black, font=\small\bfseries] at (0, 2.4) {$\text{NP-Difícil}$};
+    \node[font=\footnotesize\bfseries, align=center] at (0, 1.25) {$\text{NPC}$\\($\text{NP} \cap \text{NP-Difícil}$)};
+\end{tikzpicture}
+\caption{Relação entre $\text{P}$, $\text{NP}$, $\text{NPC}$ e $\text{NP-Difícil}$ supondo $\text{P} \neq \text{NP}$ \cite{cormen2012algoritmos}.}
+\label{fig:classes_diagrama}
+\end{figure}
+
+\subsection{A Questão $\text{P} \neq \text{NP}$}
+
+Saber se $\text{P} = \text{NP}$ ou $\text{P} \neq \text{NP}$ é um problema em aberto desde 1971 e um dos sete Problemas do Milênio do Instituto Clay. A dúvida central é se todo problema cuja resposta pode ser conferida rapidamente também pode ser resolvido do zero em tempo polinomial (Figura \ref{fig:classes_diagrama}).
+
+A maioria dos pesquisadores acredita que $\text{P} \neq \text{NP}$ porque milhares de problemas práticos já foram provados NP-Completos em áreas bem diferentes e, em mais de 50 anos de estudo, nenhum algoritmo exato polinomial foi encontrado para nenhum deles \cite{cormen2012algoritmos}. Além disso, se $\text{P} = \text{NP}$ com um algoritmo prático, haveria duas consequências diretas:
+\begin{enumerate}
+    \item \textit{Criptografia:} algoritmos como RSA e chaves baseadas em logaritmo discreto dependem do fato de que conferir uma chave ou multiplicar primos é rápido ($\text{P}$), enquanto fatorar ou inverter a operação sem a chave é custoso ($\text{NP}$). Se $\text{P} = \text{NP}$, essas chaves poderiam ser quebradas em tempo polinomial.
+    \item \textit{Otimização:} problemas difíceis de logística, escala industrial e acoplamento molecular passariam a ter solução ótima exata em tempo polinomial.
+\end{enumerate}
+
+\subsection{Reduções Polinomiais e Demonstrações}
+
+Para provar que um novo problema $L$ é NP-Completo sem reduzir toda a classe $\text{NP}$ até ele, usa-se o Lema 34.8:
+
+\begin{lema}[Lema 34.8 de Cormen et al. \cite{cormen2012algoritmos}]
+Se $L'$ é NP-Completo e $L' \le_P L$, então $L$ é NP-Difícil. Se, além disso, $L \in \text{NP}$, então $L \in \text{NPC}$.
+\end{lema}
+
+Com isso, o roteiro de prova no Capítulo 34 de Cormen et al. \cite{cormen2012algoritmos} segue cinco passos: (1) provar que $L \in \text{NP}$; (2) escolher um $L' \in \text{NPC}$ conhecido; (3) descrever a transformação $f(x)$; (4) provar que $x \in L' \iff f(x) \in L$; e (5) mostrar que $f$ roda em tempo polinomial. A Figura \ref{fig:cadeia_cormen} mostra a sequência de reduções usada até chegar em \texttt{VERTEX-COVER} e \texttt{TSP}.
+
+\begin{figure}[htbp]
+\centering
+\begin{tikzpicture}[
+    node distance=0.38cm,
+    prob/.style={rectangle, draw=blue!75!black, fill=blue!5, thick, minimum width=5.2cm, minimum height=0.58cm, align=center, rounded corners=2pt, font=\footnotesize\bfseries},
+    arrow/.style={-{Stealth[length=1.8mm]}, thick, draw=blue!75!black}
+]
+    \node[prob, fill=orange!15, draw=orange!80!black] (csat) {1. $\text{CIRCUIT-SAT}$ (Seção 34.3)};
+    \node[prob, below=of csat] (sat) {2. $\text{SAT}$ (Seção 34.4)};
+    \node[prob, below=of sat] (3sat) {3. $\text{3-CNF-SAT}$ (Seção 34.4)};
+    \node[prob, below=of 3sat] (clique) {4. $\text{CLIQUE}$ (Seção 34.5.1)};
+    \node[prob, below=of clique] (vc) {5. $\text{VERTEX-COVER}$ (Seção 34.5.2)};
+    \node[prob, below=of vc] (ham) {6. $\text{HAM-CYCLE}$ (Seção 34.5.3)};
+    \node[prob, below=of ham] (tsp) {7. $\text{TSP}$ (Seção 34.5.4)};
+
+    \draw[arrow] (csat) -- node[right, font=\scriptsize] {$\le_P$} (sat);
+    \draw[arrow] (sat) -- node[right, font=\scriptsize] {$\le_P$} (3sat);
+    \draw[arrow] (3sat) -- node[right, font=\scriptsize] {$\le_P$} (clique);
+    \draw[arrow] (clique) -- node[right, font=\scriptsize] {$\le_P$} (vc);
+    \draw[arrow] (vc) -- node[right, font=\scriptsize] {$\le_P$} (ham);
+    \draw[arrow] (ham) -- node[right, font=\scriptsize] {$\le_P$} (tsp);
+\end{tikzpicture}
+\caption{Sequência de reduções polinomiais do Capítulo 34 de Cormen et al. \cite{cormen2012algoritmos}.}
+\label{fig:cadeia_cormen}
+\end{figure}
+
+\subsubsection{De $\text{CIRCUIT-SAT}$ para $\text{SAT}$ e $\text{3-CNF-SAT}$}
+
+O primeiro problema NP-Completo da cadeia é a satisfazibilidade de circuitos booleanos (\texttt{CIRCUIT-SAT}, Teorema 34.7 de Cormen et al. \cite{cormen2012algoritmos}). Para mostrar que toda linguagem $L \in \text{NP}$ se reduz a \texttt{CIRCUIT-SAT} (Lema 34.6), considera-se o verificador $A(x, y)$ que roda em tempo $T(n) = O(n^k)$. Em cada etapa da execução, o estado da memória, do contador de programa e dos registradores forma uma configuração $c_i$. Como a passagem de $c_i$ para $c_{i+1}$ é feita pelo hardware usando portas \texttt{AND}, \texttt{OR} e \texttt{NOT} (circuito $M$), basta ligar $T(n)$ cópias de $M$ em sequência, fixar a entrada $x$ e deixar os bits do certificado $y$ como entradas livres. O circuito resultante $C = f(x)$ tem tamanho polinomial e produz saída $1$ se e somente se existir um certificado $y$ tal que $A(x, y) = 1$.
+
+Para reduzir $\text{CIRCUIT-SAT} \le_P \text{SAT}$ (Teorema 34.9), não podemos simplesmente substituir as entradas das portas de trás para frente, pois fios com leque de saída (\textit{fan-out}) $\ge 2$ duplicariam subfórmulas e fariam a fórmula crescer de forma exponencial. Em vez disso, cria-se uma variável $x_i$ para cada fio e escreve-se uma cláusula com o operador $\leftrightarrow$ para cada porta (por exemplo, $x_{10} \leftrightarrow (x_7 \land x_8 \land x_9)$ para uma porta \texttt{AND} na Figura 34.10 do livro). A fórmula final é o \texttt{AND} do fio de saída com as cláusulas de todas as portas.
+
+Depois, reduz-se $\text{SAT} \le_P \text{3-CNF-SAT}$ (Teorema 34.10), onde cada cláusula é um \texttt{OR} de exatamente três literais distintos. A conversão é feita em três etapas: (i) monta-se a árvore binária da fórmula criando variáveis $y_i$ nos nós internos para que cada cláusula tenha no máximo 3 variáveis; (ii) usa-se a tabela-verdade de cada cláusula (máximo de $8$ linhas) e as Leis de De Morgan para passá-la para a Forma Normal Conjuntiva (CNF); e (iii) usam-se duas variáveis auxiliares $p$ e $q$ para esticar cláusulas de 1 ou 2 literais (por exemplo, $(l_1 \lor l_2)$ vira $(l_1 \lor l_2 \lor p) \land (l_1 \lor l_2 \lor \neg p)$).
+
+\subsubsection{Redução $\text{3-CNF-SAT} \le_P \text{CLIQUE}$}
+
+Um clique em $G = (V, E)$ é um subconjunto $V' \subseteq V$ onde todo par de vértices é ligado por uma aresta. O problema \texttt{CLIQUE} pergunta se existe um clique de tamanho $k$ em $G$.
+
+\begin{teorema}[Teorema 34.11 de Cormen et al. \cite{cormen2012algoritmos}]
+O problema $\text{CLIQUE}$ é NP-Completo.
+\end{teorema}
+
+\begin{proof}
+Primeiro, $\text{CLIQUE} \in \text{NP}$: dado o conjunto $V'$ como certificado, confere-se se $|V'| = k$ e se toda dupla $u, v \in V'$ tem aresta em $E$ em tempo $O(|V|^2)$.
+
+Para reduzir $\text{3-CNF-SAT} \le_P \text{CLIQUE}$, seja $\phi = C_1 \land C_2 \land \dots \land C_k$ uma fórmula em 3-CNF em que cada cláusula é $C_r = (l_1^r \lor l_2^r \lor l_3^r)$. Construímos o grafo $G = (V, E)$ assim:
+\begin{itemize}
+    \item Para cada cláusula $C_r$, colocamos uma tripla de vértices $V_r = \{v_1^r, v_2^r, v_3^r\}$ em $V$ ($3k$ vértices ao todo).
+    \item Colocamos uma aresta entre $v_i^r$ e $v_j^s$ se: (a) eles estão em triplas diferentes ($r \neq s$); e (b) seus literais são coerentes, isto é, $l_i^r$ não é a negação de $l_j^s$ ($l_i^r \neq \neg l_j^s$).
+\end{itemize}
+Essa construção testa os pares entre os $3k$ vértices e roda em tempo polinomial $O(k^2)$. Resta provar a equivalência:
+\begin{itemize}
+    \item \textit{Ida ($\implies$):} Se $\phi$ tem uma atribuição que a satisfaz, cada cláusula $C_r$ tem pelo menos um literal verdadeiro $l_i^r = 1$. Escolhendo um vértice verdadeiro $v_i^r$ de cada tripla, formamos $V'$ com $k$ vértices. Como dois vértices de $V'$ têm literais iguais a $1$ na mesma atribuição, um não pode ser a negação do outro. Logo, todos os pares em $V'$ têm aresta em $E$, formando um clique de tamanho $k$.
+    \item \textit{Volta ($\impliedby$):} Se $G$ tem um clique $V'$ de tamanho $k$, como não há arestas dentro da mesma tripla $V_r$, $V'$ tem exatamente um vértice de cada uma das $k$ triplas. Como os vértices de $V'$ são todos ligados entre si, nenhum literal de $V'$ é a negação de outro, permitindo atribuir $1$ a todos os literais de $V'$ sem conflito e satisfazer $\phi$.
+\end{itemize}
+\end{proof}
+
+\begin{figure}[htbp]
+\centering
+\resizebox{\columnwidth}{!}{%
+\begin{tikzpicture}[
+    scale=0.8,
+    vnode/.style={circle, draw=black!75, thick, minimum size=7.5mm, font=\scriptsize, fill=white, inner sep=1pt},
+    cnode/.style={vnode, fill=blue!25, draw=blue!80!black, very thick, font=\scriptsize\bfseries},
+    bg_edge/.style={draw=gray!45, thin},
+    clique_edge/.style={draw=blue!80!black, very thick}
+]
+    \node[font=\footnotesize\bfseries] at (0, 3.7) {$C_1 = (x_1 \lor \neg x_2 \lor \neg x_3)$};
+    \node[vnode] (c1_1) at (-1.8, 2.8) {$x_1$};
+    \node[cnode] (c1_2) at (0.0, 2.8) {$\neg x_2$};
+    \node[vnode] (c1_3) at (1.8, 2.8) {$\neg x_3$};
+
+    \node[font=\footnotesize\bfseries] at (-3.2, -1.4) {$C_2 = (\neg x_1 \lor x_2 \lor x_3)$};
+    \node[vnode] (c2_1) at (-4.6, -0.5) {$\neg x_1$};
+    \node[vnode] (c2_2) at (-3.2, -0.5) {$x_2$};
+    \node[cnode] (c2_3) at (-1.8, -0.5) {$x_3$};
+
+    \node[font=\footnotesize\bfseries] at (3.2, -1.4) {$C_3 = (x_1 \lor x_2 \lor x_3)$};
+    \node[vnode] (c3_1) at (1.8, -0.5) {$x_1$};
+    \node[vnode] (c3_2) at (3.2, -0.5) {$x_2$};
+    \node[cnode] (c3_3) at (4.6, -0.5) {$x_3$};
+
+    \draw[bg_edge] (c1_1) -- (c2_2); \draw[bg_edge] (c1_1) -- (c2_3);
+    \draw[bg_edge] (c1_1) -- (c3_1); \draw[bg_edge] (c1_1) -- (c3_2);
+    \draw[bg_edge] (c1_1) -- (c3_3); \draw[bg_edge] (c1_2) -- (c2_1);
+    \draw[bg_edge] (c1_2) -- (c3_1); \draw[bg_edge] (c1_3) -- (c2_1);
+    \draw[bg_edge] (c1_3) -- (c2_2); \draw[bg_edge] (c1_3) -- (c3_1);
+    \draw[bg_edge] (c1_3) -- (c3_2); \draw[bg_edge] (c2_1) -- (c3_2);
+    \draw[bg_edge] (c2_1) -- (c3_3); \draw[bg_edge] (c2_2) -- (c3_1);
+    \draw[bg_edge] (c2_2) -- (c3_2); \draw[bg_edge] (c2_2) -- (c3_3);
+    \draw[bg_edge] (c2_3) -- (c3_1); \draw[bg_edge] (c2_3) -- (c3_2);
+
+    \draw[clique_edge] (c1_2) -- (c2_3);
+    \draw[clique_edge] (c2_3) -- (c3_3);
+    \draw[clique_edge] (c1_2) -- (c3_3);
+\end{tikzpicture}%
+}
+\caption{Redução $\text{3-CNF-SAT} \le_P \text{CLIQUE}$ da Figura 34.14 de Cormen et al. \cite{cormen2012algoritmos}. Para $x_2 = 0$ e $x_3 = 1$, os vértices $\{\neg x_2, x_3, x_3\}$ formam um clique de tamanho $3$.}
+\label{fig:exemplo_3sat_clique}
+\end{figure}
+
+\subsubsection{Redução $\text{CLIQUE} \le_P \text{VERTEX-COVER}$ e $\text{TSP}$}
+
+Dado $G = (V, E)$, o grafo complemento é $\overline{G} = (V, \overline{E})$, com $\overline{E} = \{(u, v) : u \neq v \text{ e } (u, v) \notin E\}$ (Figura \ref{fig:exemplo_clique_vc}).
+
+\begin{teorema}[Teorema 34.12 de Cormen et al. \cite{cormen2012algoritmos}]
+O problema $\text{VERTEX-COVER}$ é NP-Completo.
+\end{teorema}
+
+\begin{proof}
+Já vimos que $\text{VERTEX-COVER} \in \text{NP}$. Dada uma instância $(G, k)$ de \texttt{CLIQUE}, calcula-se o complemento $\overline{G}$ em $O(|V|^2)$ e gera-se a instância $(\overline{G}, |V| - k)$ de \texttt{VERTEX-COVER}:
+\begin{itemize}
+    \item \textit{Ida ($\implies$):} Se $V'$ é um clique de tamanho $k$ em $G$, então para toda aresta $(u, v) \in \overline{E}$ vale $(u, v) \notin E$. Logo, $u$ e $v$ não podem estar ambos em $V'$, ou seja, pelo menos um deles pertence a $V \setminus V'$. Assim, $V \setminus V'$ cobre todas as arestas de $\overline{E}$ e tem tamanho $|V| - k$.
+    \item \textit{Volta ($\impliedby$):} Se $V'$ é uma cobertura de tamanho $|V| - k$ em $\overline{G}$, então para toda dupla $u, v \in V \setminus V'$ a aresta $(u, v)$ não pode estar em $\overline{E}$ (pois não teria ponta em $V'$). Logo, $(u, v) \in E$ e $V \setminus V'$ é um clique de tamanho $k$ em $G$.
+\end{itemize}
+\end{proof}
+
+\begin{figure}[htbp]
+\centering
+\resizebox{\columnwidth}{!}{%
+\begin{tikzpicture}[
+    scale=0.8,
+    vnode/.style={circle, draw=black!80, thick, minimum size=6.5mm, font=\footnotesize\bfseries, fill=white},
+    clique_node/.style={vnode, fill=blue!25, draw=blue!80!black, very thick},
+    vc_node/.style={vnode, fill=red!25, draw=red!80!black, very thick},
+    edge_g/.style={thick, draw=black!70},
+    edge_clique/.style={very thick, draw=blue!80!black},
+    edge_gbar/.style={thick, draw=red!75!black, dashed}
+]
+    \begin{scope}[xshift=0cm]
+        \node[font=\footnotesize\bfseries] at (1.5, 2.6) {$G$: Clique $\{u,v,x,y\}$};
+        \node[clique_node] (u) at (0, 1.6) {$u$};
+        \node[clique_node] (v) at (1.5, 1.6) {$v$};
+        \node[vnode] (w) at (3.0, 1.6) {$w$};
+        \node[vnode] (z) at (0, 0) {$z$};
+        \node[clique_node] (y) at (1.5, 0) {$y$};
+        \node[clique_node] (x) at (3.0, 0) {$x$};
+        \draw[edge_clique] (u) -- (v) -- (x) -- (y) -- (u);
+        \draw[edge_clique] (u) -- (x); \draw[edge_clique] (v) -- (y);
+        \draw[edge_g] (v) -- (w); \draw[edge_g] (x) -- (w);
+        \draw[edge_g] (u) -- (z); \draw[edge_g] (y) -- (z);
+    \end{scope}
+
+    \draw[-{Stealth[length=2.2mm]}, thick] (3.6, 0.8) -- (4.5, 0.8);
+
+    \begin{scope}[xshift=5.1cm]
+        \node[font=\footnotesize\bfseries] at (1.5, 2.6) {$\overline{G}$: Cobertura $\{w,z\}$};
+        \node[vnode] (u2) at (0, 1.6) {$u$};
+        \node[vnode] (v2) at (1.5, 1.6) {$v$};
+        \node[vc_node] (w2) at (3.0, 1.6) {$w$};
+        \node[vc_node] (z2) at (0, 0) {$z$};
+        \node[vnode] (y2) at (1.5, 0) {$y$};
+        \node[vnode] (x2) at (3.0, 0) {$x$};
+        \draw[edge_gbar] (u2) to[bend left=22] (w2);
+        \draw[edge_gbar] (y2) -- (w2);
+        \draw[edge_gbar] (z2) -- (w2);
+        \draw[edge_gbar] (z2) -- (v2);
+        \draw[edge_gbar] (z2) to[bend right=22] (x2);
+    \end{scope}
+\end{tikzpicture}%
+}
+\caption{Redução $\text{CLIQUE} \le_P \text{VERTEX-COVER}$ (Figura 34.15 de Cormen et al. \cite{cormen2012algoritmos}).}
+\label{fig:exemplo_clique_vc}
+\end{figure}
+
+Em seguida, o Teorema 34.13 reduz $\text{VERTEX-COVER} \le_P \text{HAM-CYCLE}$ trocando cada aresta $(u, v) \in E$ por um \textit{widget} $W_{uv}$ de $12$ vértices ligado a $k$ vértices seletores $s_1, \dots, s_k$. Por fim, o Teorema 34.14 prova que $\text{HAM-CYCLE} \le_P \text{TSP}$: dado $G = (V, E)$, monta-se o grafo completo $G'$ com custo $c(i, j) = 0$ se $(i, j) \in E$ e $c(i, j) = 1$ se $(i, j) \notin E$, e limite $k = 0$. Assim, $G$ tem ciclo hamiltoniano se e somente se $G'$ tem percurso de custo $0$.
+
+\subsection{Explosão Combinatória}
+
+A dificuldade prática dos algoritmos de força bruta vem da quantidade de combinações possíveis:
+\begin{enumerate}
+    \item \textit{Cobertura de Vértices ($2^n$):} Como cada um dos $n = |V|$ vértices pode entrar ou não no subconjunto, o total de subconjuntos é $\sum_{k=0}^{n} \binom{n}{k} = 2^n$, levando a $O(2^n \cdot |E|)$.
+    \item \textit{Caixeiro-Viajante ($(n-1)!/2$):} Fixando a primeira cidade entre as $n!$ permutações ($n!/n = (n-1)!$) e dividindo por $2$ porque o sentido horário e anti-horário têm o mesmo custo em grafos simétricos, existem $\frac{(n-1)!}{2}$ rotas.
+\end{enumerate}
+
+Aumentar a velocidade do processador ajuda pouco quando o algoritmo é exponencial. Se um algoritmo de tempo $2^n$ passa a rodar em um computador $1.000$ vezes mais rápido, o novo tamanho resolvido no mesmo tempo é $2^{n'} = 1000 \cdot 2^n \implies n' = n + \log_2(1000) \approx n + 10$. Ou seja, ganham-se apenas 10 vértices. A Tabela \ref{tab:crescimento_combinatorio} mostra o tempo estimado em um processador de $10^9$ operações por segundo. Quando $n$ cresce, usam-se algoritmos de aproximação com razão $\max(C/C^*, C^*/C) \le \rho(n)$ (Cap. 35 \cite{cormen2012algoritmos}) ou metaheurísticas como o \textit{Simulated Annealing}.
+
+\begin{table}[htbp]
+\centering
+\caption{Tempo estimado para $10^9\text{ op/s}$ em diferentes complexidades.}
+\label{tab:crescimento_combinatorio}
+\resizebox{\columnwidth}{!}{%
+\begin{tabular}{@{}crrrr@{}}
+\toprule
+$n$ & Polinomial ($n^2$) & Exponencial ($2^n$) & Held-Karp ($n^2 2^n$) & Fatorial ($(n-1)!/2$) \\
+\midrule
+$5$   & $25\text{ ns}$    & $32\text{ ns}$             & $0{,}8\ \mu\text{s}$       & $12\text{ ns}$ \\
+$10$  & $100\text{ ns}$   & $1{,}0\ \mu\text{s}$       & $102{,}4\ \mu\text{s}$     & $181{,}4\ \mu\text{s}$ \\
+$15$  & $225\text{ ns}$   & $32{,}8\ \mu\text{s}$      & $7{,}4\text{ ms}$          & $43{,}6\text{ s}$ \\
+$20$  & $400\text{ ns}$   & $1{,}0\text{ ms}$          & $419{,}4\text{ ms}$        & $1{,}9\text{ anos}$ \\
+$25$  & $625\text{ ns}$   & $33{,}6\text{ ms}$         & $21{,}0\text{ s}$          & $9{,}8 \times 10^6\text{ anos}$ \\
+$50$  & $2{,}5\ \mu\text{s}$ & $13{,}0\text{ dias}$    & $89{,}3\text{ anos}$       & $9{,}6 \times 10^{45}\text{ anos}$ \\
+$100$ & $10{,}0\ \mu\text{s}$ & $4{,}0 \times 10^{13}\text{ anos}$ & $4{,}0 \times 10^{17}\text{ anos}$ & $1{,}5 \times 10^{139}\text{ anos}$ \\
+\bottomrule
+\end{tabular}%
+}
+\end{table}
+
+% ==========================================================================
+% SEÇÃO III - O PARADIGMA ALGORÍTMICO (PESSOA 2 - ISSUE #5)
+% ==========================================================================
+\section{O Paradigma Algorítmico (Engenharia da Solução)}
+\label{sec:paradigma}
+
+% Seção reservada para a Pessoa 2 (Maria Eduarda).
+
+\begin{algorithm}[htbp]
+\caption{\texttt{APPROX-VERTEX-COVER}$(G)$ \cite{cormen2012algoritmos}}
+\label{alg:approx_vc}
+\KwIn{Grafo não dirigido $G = (V, E)$.}
+\KwOut{Cobertura de vértices $C \subseteq V$ com $|C| \le 2|C^*|$.}
+$C \leftarrow \emptyset$\;
+$E' \leftarrow E[G]$\;
+\While{$E' \neq \emptyset$}{
+    Escolha uma aresta qualquer $(u, v) \in E'$\;
+    $C \leftarrow C \cup \{u, v\}$\;
+    Remova de $E'$ todas as arestas ligadas a $u$ ou $v$\;
+}
+\Return{$C$}\;
+\end{algorithm}
+
+% ==========================================================================
+% SEÇÃO IV - ANÁLISE ASSINTÓTICA RIGOROSA (PESSOA 2 - ISSUE #6)
+% ==========================================================================
+\section{Análise Assintótica Rigorosa (Custos)}
+\label{sec:analise}
+
+% Seção reservada para a Pessoa 2 (Maria Eduarda).
+
+% ==========================================================================
+% SEÇÃO V - ESTUDO DE CASO E IMPLEMENTAÇÃO PRÁTICA (PESSOA 2 E 5)
+% ==========================================================================
+\section{Estudo de Caso e Implementação Prática}
+\label{sec:estudo_de_caso}
+
+% Seção reservada para a Pessoa 2 (Maria Eduarda) e Pessoa 5 (Jade).
+
+% ==========================================================================
+% SEÇÃO VI - CONCLUSÕES
+% ==========================================================================
+\section{Conclusões}
+\label{sec:conclusao}
+
+Este trabalho uniu o estudo teórico dos Capítulos 34 e 35 de Cormen et al. \cite{cormen2012algoritmos} com testes práticos de algoritmos exatos, aproximados e metaheurísticos em Python. A partir dos experimentos da Seção \ref{sec:estudo_de_caso}, foi possível observar na prática quando cada abordagem funciona bem e quando deixa de ser viável.
+
+Nos algoritmos exatos e verificadores, ficou evidente a diferença entre verificar e resolver um problema. Enquanto os verificadores validam uma solução de TSP em $O(n)$ e de \textit{Vertex Cover} em $O(|V| + |E|)$ em poucos microssegundos, a força bruta trava logo em entradas pequenas. No TSP com $n = 10$, a Força Bruta levou $1{,}522\text{ s}$, enquanto o algoritmo de Held-Karp \cite{held1962dynamic} ($\Theta(n^2 2^n)$) levou $6{,}92\text{ ms}$ ($220$ vezes mais rápido) e resolveu $n = 14$ em $235{,}1\text{ ms}$. Na Cobertura de Vértices com $n = 18$, o \textit{Branch-and-Bound} caiu de $242{,}1\text{ ms}$ (força bruta) para $4{,}97\text{ ms}$. Mesmo assim, métodos exatos só servem para entradas pequenas: acima de $n = 22$, a tabela $\Theta(n 2^n)$ do Held-Karp estoura a memória RAM.
+
+Já os algoritmos de aproximação rodaram em microssegundos e mantiveram o erro dentro dos limites teóricos do Capítulo 35: no \texttt{APPROX-VERTEX-COVER} ($\rho = 2$), a razão média ficou entre $1{,}42$ e $1{,}70$; no \texttt{APPROX-TSP-TOUR} ($\rho = 2$ com desigualdade triangular), as rotas ficaram em média de $8\%$ a $20\%$ acima do ótimo; e no \texttt{GREEDY-SET-COVER} ($\rho = H(d)$), a razão média ficou entre $1{,}00$ e $1{,}06$.
+
+Por fim, no problema contínuo inspirado em \textit{Molecular Docking} \cite{pagadala2017software,huang2018comprehensive}, o \textit{Simulated Annealing} dependeu diretamente do orçamento de avaliações $B$. Com poucas avaliações ($B = 100$), a temperatura ainda alta faz o algoritmo aceitar pioras e perder para o \textit{Random Search}. Já para $B \ge 10.000$, o resfriamento gradual permitiu sair de mínimos locais e superar a busca aleatória em até $29$ das $30$ execuções ($p = 5{,}77 \times 10^{-8}$). A Tabela \ref{tab:resumo_aplicabilidade} resume onde cada método se aplica.
+
+\begin{table}[htbp]
+\centering
+\caption{Resumo de onde cada abordagem funciona e onde falha.}
+\label{tab:resumo_aplicabilidade}
+\footnotesize
+\begin{tabular}{@{}p{2.0cm}p{3.0cm}p{3.0cm}@{}}
+\toprule
+\textbf{Abordagem} & \textbf{Onde Usar} & \textbf{Onde Falha} \\
+\midrule
+\textbf{Exatos} (Força Bruta, B\&B, Held-Karp) & Entradas pequenas ($n \le 20$) e testes que exigem o ótimo exato $C^*$. & Explosão de tempo ($2^n, n!$) e falta de memória RAM ($\Theta(n 2^n)$). \\[0.1cm]
+\textbf{Aproximação} (Cap. 35) & Grafos grandes quando há propriedade estrutural (ex: desigualdade triangular). & Problemas sem aproximação constante (TSP geral) ou domínios contínuos. \\[0.1cm]
+\textbf{Metaheurísticas} (\textit{Simulated Annealing}) & Espaços contínuos ou grandes com vários mínimos locais (\textit{Docking}). & Quando se exige garantia formal de erro ou o orçamento $B$ é muito curto. \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\bibliographystyle{IEEEtran}
+\bibliography{referencias}
+
+% ==========================================================================
+% APÊNDICE - CHEAT SHEET (PESSOA 2 - ISSUE #7)
+% ==========================================================================
+\appendices
+\section{Cheat Sheet: Guia de Consulta Rápida}
+\label{ap:cheatsheet}
+
+\subsection*{a) Definição em Uma Frase}
+Quando um problema tem verificação rápida em tempo polinomial ($\text{NP}$), mas achar o ótimo exato sofre explosão combinatória ($\text{NP-Completo}$), usam-se métodos exatos com poda apenas para entradas pequenas e recorre-se a aproximações (com limite $\rho(n)$) ou metaheurísticas para entradas maiores.
+
+\subsection*{b) Quando Utilizar Cada Abordagem?}
+% Espaço reservado para o diagrama de decisão da Pessoa 2 (Issue #7).
+
+\subsection*{c) Tabela Resumo de Complexidades}
+\noindent
+\resizebox{\columnwidth}{!}{%
+\begin{tabular}{@{}llll@{}}
+\toprule
+\textbf{Algoritmo} & \textbf{Tempo (Pior Caso)} & \textbf{Espaço} & \textbf{Garantia} \\
+\midrule
+Verificador Vertex Cover & $O(|V| + |E|)$ & $O(|V|)$ & Exata (Decisão) \\
+Verificador TSP & $O(n)$ & $O(n)$ & Exata (Decisão) \\
+Vertex Cover (Força Bruta) & $O(2^n \cdot |E|)$ & $O(n)$ & Ótimo ($C^*$) \\
+Vertex Cover (Branch-and-Bound) & $O(2^k \cdot |E|)$ & $O(n)$ & Ótimo ($C^*$) \\
+TSP (Força Bruta) & $\Theta((n-1)! \cdot n)$ & $O(n)$ & Ótimo ($C^*$) \\
+TSP (Held-Karp / PD) & $\Theta(n^2 2^n)$ & $\Theta(n 2^n)$ & Ótimo ($C^*$) \\
+\texttt{APPROX-VERTEX-COVER} & $O(|V| + |E|)$ & $O(|V|)$ & $\rho = 2$ \\
+\texttt{APPROX-TSP-TOUR} & $O(n^2)$ & $O(n)$ & $\rho = 2$ (métrico) \\
+\texttt{GREEDY-SET-COVER} & $O(|X|\,|\mathcal{F}|\min(|X|,|\mathcal{F}|))$ & $O(|X|)$ & $\rho = H(d)$ \\
+\textit{Simulated Annealing} & $O(A \cdot C)$ & $O(1)$ & Empírica \\
+\bottomrule
+\end{tabular}%
+}
+
+\subsection*{d) Esqueleto Base da Técnica}
+% Espaço reservado para o esqueleto de pseudocódigo da Pessoa 2 (Issue #7).
+
+\end{document}
