@@ -242,13 +242,4 @@ pdflatex main.tex
 pdflatex main.tex
 ```
 
----
 
-## 📑 Apresentações (Slides Marp)
-
-Os slides estão em formato Markdown compatível com [Marp](https://marp.app/):
-
-```bash
-npx @marp-team/marp-cli slides/slides_algoritmos_exatos.md --pdf
-npx @marp-team/marp-cli slides/slides_aproximacoes.md --pdf
-```
