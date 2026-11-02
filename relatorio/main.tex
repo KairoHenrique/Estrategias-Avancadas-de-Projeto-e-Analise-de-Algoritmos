@@ -778,10 +778,32 @@ Quando nenhuma garantia desse tipo é conhecida, como no \textit{Molecular Docki
 
 % Seção reservada para a Pessoa 2 (Maria Eduarda) e Pessoa 5 (Jade).
 
+Esta seção aplica as ideias anteriores a um problema contínuo inspirado em \textit{Molecular Docking}, a busca pela posição e pela orientação de uma molécula pequena, o ligante, em relação a um alvo~\cite{pagadala2017software}. O modelo é educacional e simplificado. Ele não calcula afinidade química real, mas preserva a dificuldade central do problema, que é um espaço de busca contínuo com muitos mínimos locais. A documentação completa do modelo está no repositório da equipe.
+
+\subsection{Modelo do Problema}
+\label{subsec:modelo}
+
+Uma solução, chamada de \textit{pose}, é o vetor $p = (x, y, \theta)$, em que $(x, y)$ é a posição do ligante no plano e $\theta$ é o ângulo de rotação. A busca ocorre na região $-4 \le x, y \le 4$ e $-\pi \le \theta < \pi$. O ligante tem quatro átomos fixos, representados pelos pontos $(0;\,0)$, $(0{,}8;\,0)$, $(0;\,0{,}8)$ e $(0{,}8;\,0{,}8)$. Para avaliar uma pose, cada átomo $(a_i, b_i)$ é rotacionado por $\theta$ e transladado por $(x, y)$:
+\begin{equation}
+\begin{aligned}
+x_i' &= x + a_i \cos\theta - b_i \sin\theta,\\
+y_i' &= y + a_i \sin\theta + b_i \cos\theta.
+\end{aligned}
+\end{equation}
+
+Cada instância tem $K$ alvos, sorteados em $[-2, 2]^2$, e $2K$ obstáculos, sorteados em $[-4, 4]^2$, em que $K$ é o parâmetro de complexidade. O sorteio usa uma semente explícita, então a mesma combinação de $K$ e semente gera sempre a mesma instância. A energia de uma pose soma três parcelas:
+\begin{align}
+E(p) &= E_{\text{atr}}(p) + E_{\text{rep}}(p) + E_{\text{lim}}(p), \label{eq:energia}\\
+E_{\text{atr}}(p) &= -\textstyle\sum_{i} e^{-d_i^2/(2\sigma^2)}, \nonumber\\
+E_{\text{rep}}(p) &= \lambda \textstyle\sum_{i}\sum_{j} \max(0,\, r - d_{ij})^2, \nonumber\\
+E_{\text{lim}}(p) &= \textstyle\sum_{i} \big[\max(0,\, |x_i'| - \ell)^2 + \max(0,\, |y_i'| - \ell)^2\big]. \nonumber
+\end{align}
+Em $E_{\text{atr}}$, $d_i$ é a distância do átomo $i$ até o alvo mais próximo, e cada átomo contribui com um valor entre $-1$ e $0$, mais negativo quanto mais perto ele está de um alvo. Em $E_{\text{rep}}$, $d_{ij}$ é a distância do átomo $i$ ao obstáculo $j$, e a penalidade só aparece quando essa distância fica abaixo de $r$. A parcela $E_{\text{lim}}$ penaliza átomos que saem do quadrado $[-\ell, \ell]^2$. O código usa $\sigma = 1{,}2$, $r = 0{,}9$, $\lambda = 8$ e $\ell = 5$. Quanto menor a energia, melhor a pose, e o objetivo é encontrar $p^* = \arg\min_p E(p)$.
+
 \subsection{Metaheurística: \textit{Simulated Annealing}}
 \label{subsec:sa}
 
-No estudo de caso inspirado em \textit{Molecular Docking}, uma pose do ligante é descrita por três variáveis contínuas: a posição $(x, y)$ e o ângulo de rotação $\theta$. A função de energia $E(p)$ soma a atração pelos alvos, a repulsão dos obstáculos e uma penalidade para átomos fora da região permitida. Quanto menor a energia, melhor a pose. Como o espaço de busca é contínuo e tem vários mínimos locais, não existe uma aproximação com fator $\rho$ provado, e a estratégia adotada é o \textit{Simulated Annealing}~\cite{kirkpatrick1983optimization}.
+Como o espaço de busca da Seção~\ref{subsec:modelo} é contínuo e tem vários mínimos locais, não existe uma aproximação com fator $\rho$ provado, e a estratégia adotada é o \textit{Simulated Annealing}~\cite{kirkpatrick1983optimization}.
 
 O método se inspira no resfriamento lento de um metal. A cada iteração, o algoritmo gera uma pose vizinha da atual, com um pequeno deslocamento aleatório em $x$, $y$ e $\theta$. Se a energia diminui, a nova pose é aceita. Se a energia aumenta em $\Delta > 0$, a pose ainda pode ser aceita com probabilidade
 \begin{equation}
@@ -809,15 +831,63 @@ $p^* \leftarrow p$\;
 \Return{$p^*$}\;
 \end{algorithm}
 
-As energias de $p$ e de $p^*$ ficam guardadas em variáveis, então cada iteração do Algoritmo~\ref{alg:sa} calcula $E$ uma única vez, para a pose $p'$. No código da equipe, os valores usados são $T_0 = 2$ e $T_f = 0{,}01$.
+As energias de $p$ e de $p^*$ ficam guardadas em variáveis, então cada iteração do Algoritmo~\ref{alg:sa} calcula $E$ uma única vez, para a pose $p'$. No código da equipe, os valores usados são $T_0 = 2$ e $T_f = 0{,}01$. O deslocamento da vizinha segue uma distribuição normal com desvio padrão $0{,}6$ em $x$ e em $y$ e $0{,}25$~rad em $\theta$. A posição é mantida dentro de $[-4, 4]$ e o ângulo volta ao intervalo $[-\pi, \pi)$.
 
-\textit{Custo.} Seja $K$ o parâmetro de complexidade da instância. Uma instância de complexidade $K$ tem $K$ alvos e $2K$ obstáculos, e o ligante tem 4 átomos, um número fixo. Para cada átomo, a função de energia calcula a distância até todos os alvos e até todos os obstáculos, então uma avaliação de $E$ custa $\Theta(K)$. Seja $B = N + 1$ o orçamento de avaliações, isto é, o número total de avaliações, contada a pose inicial. As demais operações de cada iteração custam $O(1)$, logo
+\textit{Custo.} A instância tem $K$ alvos e $2K$ obstáculos, e o ligante tem 4 átomos, um número fixo. Para cada átomo, a função de energia calcula a distância até todos os alvos e até todos os obstáculos, então uma avaliação de $E$ custa $\Theta(K)$. Seja $B = N + 1$ o orçamento de avaliações, isto é, o número total de avaliações, contada a pose inicial. As demais operações de cada iteração custam $O(1)$, logo
 \begin{equation}
 T_{SA} = \Theta(B \cdot K).
 \end{equation}
 A memória extra é $O(K)$, ocupada pela lista de distâncias até os alvos dentro do cálculo da energia. Com o registro apenas da menor distância, a memória extra cairia para $O(1)$, sem mudança no tempo.
 
 Ao contrário dos algoritmos da Seção~\ref{sec:analise}, o \textit{Simulated Annealing} não tem um fator de aproximação provado. A qualidade da resposta depende do orçamento $B$ e das temperaturas $T_0$ e $T_f$, e por isso é avaliada de forma experimental, em comparação com uma busca aleatória que usa o mesmo número de avaliações.
+
+\subsection{Busca Aleatória como Referência}
+\label{subsec:rs}
+
+A referência para medir o ganho do \textit{Simulated Annealing} é a busca aleatória (\textit{Random Search}). A cada avaliação, ela sorteia uma pose em toda a região de busca, calcula a energia e guarda a melhor pose. Ela não tem pose atual, vizinhança, critério de aceitação nem temperatura. Com $B$ avaliações, o custo também é $\Theta(B \cdot K)$, então os dois métodos podem ser comparados com o mesmo orçamento.
+
+\subsection{Metodologia Experimental}
+\label{subsec:metodologia}
+
+Os experimentos cruzam cinco níveis de complexidade, $K \in \{2, 4, 6, 8, 10\}$, com cinco orçamentos, $B \in \{10^2, 10^3, 10^4, 10^5, 10^6\}$. Cada combinação foi repetida 30 vezes, o que resulta em 750 pares de execuções. Em cada par, os dois métodos usam a mesma instância e o mesmo orçamento, e todas as sementes são explícitas, o que torna os resultados reproduzíveis. Para cada par, calcula-se a diferença
+\begin{equation}
+D = E_{\text{SA}} - E_{\text{RS}},
+\end{equation}
+em que $D < 0$ indica vitória do \textit{Simulated Annealing}, pois a energia é minimizada. Em cada combinação, a análise usa duas ferramentas. A primeira é um intervalo de confiança de 95\% para a média de $D$, obtido por \textit{bootstrap}, isto é, por reamostragem com reposição das 30 diferenças. A segunda é o teste exato dos sinais, que verifica se o número de vitórias de um método se afasta do esperado sob a hipótese de chances iguais.
+
+\subsection{Resultados}
+\label{subsec:resultados}
+
+A Tabela~\ref{tab:sa_resultados} resume as 750 comparações.
+
+\begin{table}[htbp]
+\centering
+\caption{Vitórias do \textit{Simulated Annealing} sobre a busca aleatória em 30 execuções pareadas. Em negrito, o intervalo de confiança de 95\% da média de $D$ fica abaixo de zero e favorece o \textit{Simulated Annealing}. Com $\dagger$, ele fica acima de zero e favorece a busca aleatória. Nos demais casos, o intervalo contém o zero.}
+\label{tab:sa_resultados}
+\footnotesize
+\begin{tabular}{@{}lccccc@{}}
+\toprule
+$B$ & $K=2$ & $K=4$ & $K=6$ & $K=8$ & $K=10$ \\
+\midrule
+$10^2$ & 18 & 19$^\dagger$ & 19 & 18$^\dagger$ & 14$^\dagger$ \\
+$10^3$ & \textbf{26} & \textbf{29} & 21 & \textbf{26} & 24 \\
+$10^4$ & \textbf{29} & \textbf{27} & \textbf{25} & \textbf{28} & 26 \\
+$10^5$ & \textbf{27} & \textbf{27} & \textbf{28} & 26 & \textbf{28} \\
+$10^6$ & \textbf{29} & \textbf{27} & \textbf{29} & \textbf{28} & \textbf{29} \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+Com $B = 10^2$, a energia média da busca aleatória é menor em todas as complexidades, e o intervalo de confiança favorece a busca aleatória para $K = 4$, $8$ e $10$. Ainda assim, o \textit{Simulated Annealing} vence a maioria dos pares em quatro dos cinco casos. Isso indica que ele perde por uma margem grande em poucas execuções. Para $K = 2$, por exemplo, o desvio padrão da sua energia é $0{,}75$, contra $0{,}24$ da busca aleatória. Com apenas 100 avaliações e passos de desvio padrão $0{,}6$, o \textit{Simulated Annealing} explora pouco além da vizinhança da pose inicial, enquanto a busca aleatória sorteia poses em toda a região.
+
+A partir de $B = 10^4$, o \textit{Simulated Annealing} vence entre 25 e 29 dos 30 pares em todas as complexidades, com p-valor do teste dos sinais de no máximo $3{,}3 \times 10^{-4}$. O intervalo de confiança favorece o método em 13 dos 15 casos. Nos outros dois, $K = 10$ com $B = 10^4$ e $K = 8$ com $B = 10^5$, o intervalo contém o zero, mas o número de vitórias continua alto. As diferenças médias de energia são pequenas, abaixo de $0{,}02$, porque os dois métodos chegam perto da mesma região de energia mínima. A vantagem do \textit{Simulated Annealing} está no refinamento local dessa região, que a amostragem uniforme não faz.
+
+O tempo medido também confirma a análise da Seção~\ref{subsec:sa}. Para $K = 2$, o \textit{Simulated Annealing} levou em média $0{,}61$~ms com $B = 10^2$ e $65{,}3$~ms com $B = 10^4$, cerca de 100 vezes mais para um orçamento 100 vezes maior. Com $B = 10^4$ fixo, o tempo passou de $65{,}3$~ms para $130{,}0$~ms quando $K$ foi de 2 para 10, um crescimento aproximadamente linear. O tempo não dobra a cada vez que $K$ dobra porque parte do custo de cada iteração não depende de $K$, como a rotação dos quatro átomos e o sorteio da vizinha. Com o mesmo orçamento, o \textit{Simulated Annealing} levou entre 1,2 e 1,5 vez o tempo da busca aleatória, o que é coerente com o trabalho extra de cada iteração, que inclui a temperatura e o critério de Metropolis.
+
+\subsection{Limitações do Modelo}
+\label{subsec:limitacoes}
+
+O modelo é exclusivamente educacional. O ligante tem apenas quatro átomos no plano, a energia não corresponde a um modelo físico-químico validado, não há flexibilidade interna da molécula e os alvos e obstáculos são sorteados. Por isso, os resultados não se estendem a aplicações farmacêuticas reais. Também é importante separar duas dificuldades. O \textit{docking} real é computacionalmente difícil, pois envolve a flexibilidade do ligante e do receptor e um número muito grande de configurações~\cite{pagadala2017software,huang2018comprehensive}. Já o modelo simplificado tem avaliação de custo $\Theta(K)$ e não foi provado NP-difícil. O estudo mostra o comportamento de uma metaheurística em um espaço contínuo com mínimos locais, mas não demonstra a intratabilidade do \textit{docking}.
 
 % ==========================================================================
 % SEÇÃO VI - CONCLUSÕES
