@@ -718,7 +718,7 @@ O \texttt{APPROX-VERTEX-COVER} é uma 2-aproximação de tempo polinomial.
 \begin{proof}
 O tempo $O(|V| + |E|)$ já foi mostrado. A resposta é uma cobertura válida, pois o laço só termina quando $E' = \emptyset$, e uma aresta só sai de $E'$ quando uma de suas extremidades entra em $C$.
 
-Seja $A$ o conjunto das arestas escolhidas na linha 4 do Algoritmo~\ref{alg:approx_vc}. Quando $(u,v)$ é escolhida, todas as arestas que tocam $u$ ou $v$ saem de $E'$. Assim, duas arestas de $A$ nunca têm extremidade em comum, ou seja, $A$ é um \textit{emparelhamento}. Ele é \textit{maximal} porque nenhuma outra aresta de $E$ pode entrar em $A$ sem compartilhar uma extremidade. Na Figura~\ref{fig:passos_vc}, por exemplo, $A = \{(b,c), (e,f), (d,g)\}$ e as seis extremidades são todas diferentes.
+Seja $A$ o conjunto das arestas escolhidas na linha 4 do Algoritmo~\ref{alg:approx_vc}. Quando $(u,v)$ é escolhida, todas as arestas incidentes a $u$ ou $v$ saem de $E'$. Assim, duas arestas de $A$ nunca têm extremidade em comum, ou seja, $A$ é um \textit{emparelhamento}. Ele é \textit{maximal} porque nenhuma outra aresta de $E$ pode entrar em $A$ sem compartilhar uma extremidade. Na Figura~\ref{fig:passos_vc}, por exemplo, $A = \{(b,c), (e,f), (d,g)\}$ e as seis extremidades são todas diferentes.
 
 Toda cobertura ótima $C^*$ precisa ter pelo menos uma extremidade de cada aresta de $A$. Como essas arestas não compartilham extremidades, um mesmo vértice de $C^*$ não cobre duas delas. Logo $|C^*| \ge |A|$. Cada aresta de $A$ coloca dois vértices novos em $C$, então $|C| = 2|A|$. Com as duas desigualdades, $|C| = 2|A| \le 2|C^*|$.
 \end{proof}
@@ -811,13 +811,13 @@ $p^* \leftarrow p$\;
 
 As energias de $p$ e de $p^*$ ficam guardadas em variáveis, então cada iteração do Algoritmo~\ref{alg:sa} calcula $E$ uma única vez, para a pose $p'$. No código da equipe, os valores usados são $T_0 = 2$ e $T_f = 0{,}01$.
 
-\textit{Custo.} Nesta subseção, $C$ indica o parâmetro de complexidade da instância, e não uma cobertura de vértices. Uma instância de complexidade $C$ tem $C$ alvos e $2C$ obstáculos, e o ligante tem 4 átomos, um número fixo. Para cada átomo, a função de energia calcula a distância até todos os alvos e até todos os obstáculos, então uma avaliação de $E$ custa $\Theta(C)$. Seja $A = N + 1$ o número total de avaliações, contada a pose inicial. As demais operações de cada iteração custam $O(1)$, logo
+\textit{Custo.} Seja $K$ o parâmetro de complexidade da instância. Uma instância de complexidade $K$ tem $K$ alvos e $2K$ obstáculos, e o ligante tem 4 átomos, um número fixo. Para cada átomo, a função de energia calcula a distância até todos os alvos e até todos os obstáculos, então uma avaliação de $E$ custa $\Theta(K)$. Seja $B = N + 1$ o orçamento de avaliações, isto é, o número total de avaliações, contada a pose inicial. As demais operações de cada iteração custam $O(1)$, logo
 \begin{equation}
-T_{SA} = \Theta(A \cdot C).
+T_{SA} = \Theta(B \cdot K).
 \end{equation}
-A memória extra é $O(C)$, ocupada pela lista de distâncias até os alvos dentro do cálculo da energia. Com o registro apenas da menor distância, a memória extra cairia para $O(1)$, sem mudança no tempo.
+A memória extra é $O(K)$, ocupada pela lista de distâncias até os alvos dentro do cálculo da energia. Com o registro apenas da menor distância, a memória extra cairia para $O(1)$, sem mudança no tempo.
 
-Ao contrário dos algoritmos da Seção~\ref{sec:analise}, o \textit{Simulated Annealing} não tem um fator de aproximação provado. A qualidade da resposta depende do orçamento $A$ e das temperaturas $T_0$ e $T_f$, e por isso é avaliada de forma experimental, em comparação com uma busca aleatória que usa o mesmo número de avaliações.
+Ao contrário dos algoritmos da Seção~\ref{sec:analise}, o \textit{Simulated Annealing} não tem um fator de aproximação provado. A qualidade da resposta depende do orçamento $B$ e das temperaturas $T_0$ e $T_f$, e por isso é avaliada de forma experimental, em comparação com uma busca aleatória que usa o mesmo número de avaliações.
 
 % ==========================================================================
 % SEÇÃO VI - CONCLUSÕES
@@ -906,10 +906,12 @@ TSP (Held-Karp / PD) & $\Theta(n^2 2^n)$ & $\Theta(n 2^n)$ & Ótimo ($C^*$) \\
 \texttt{APPROX-VERTEX-COVER} & $O(|V| + |E|)$ & $O(|V|)$ & $\rho = 2$ \\
 \texttt{APPROX-TSP-TOUR} & $\Theta(n^2)$ & $O(n)$ & $\rho = 2$ (métrico) \\
 \texttt{GREEDY-SET-COVER} & $O(|X|\,|\mathcal{F}|\min(|X|,|\mathcal{F}|))$ & $O(|X|)$ & $\rho = H(d)$ \\
-\textit{Simulated Annealing} & $\Theta(A \cdot C)$ & $O(C)$ & Empírica \\
+\textit{Simulated Annealing} & $\Theta(B \cdot K)$ & $O(K)$ & Empírica \\
 \bottomrule
 \end{tabular}%
 }
+
+\noindent{\footnotesize No \textit{Simulated Annealing}, $B$ é o orçamento de avaliações e $K$ é o parâmetro de complexidade da instância.}
 
 \subsection*{d) Esqueleto Base da Técnica}
 Todos os algoritmos de aproximação gulosos deste trabalho seguem o mesmo modelo, que aparece no Algoritmo~\ref{alg:esqueleto}, e todas as provas de fator seguem os passos abaixo.
