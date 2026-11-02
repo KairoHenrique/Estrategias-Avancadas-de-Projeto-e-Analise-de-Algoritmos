@@ -20,6 +20,13 @@
 \DontPrintSemicolon
 \SetKwInput{KwIn}{Entrada}
 \SetKwInput{KwOut}{Saída}
+% Palavras chave do pseudocódigo em português
+\SetKwIF{If}{ElseIf}{Else}{se}{então}{senão se}{senão}{fim}
+\SetKwFor{While}{enquanto}{faça}{fim}
+\SetKwFor{ForEach}{para cada}{faça}{fim}
+\SetKwFor{For}{para}{faça}{fim}
+\SetKw{KwTo}{até}
+\SetKw{Return}{retorna}
 
 \usepackage{graphicx}
 \usepackage{booktabs}
@@ -411,7 +418,90 @@ $100$ & $10{,}0\ \mu\text{s}$ & $4{,}0 \times 10^{13}\text{ anos}$ & $4{,}0 \tim
 \section{O Paradigma Algorítmico (Engenharia da Solução)}
 \label{sec:paradigma}
 
-% Seção reservada para a Pessoa 2 (Maria Eduarda).
+A Seção~\ref{sec:fundamentacao} mostrou por que não se espera um algoritmo exato e polinomial para problemas NP-Completos. Nesta seção mostramos o ``como fazer''. Na prática existem duas saídas. A primeira é buscar o ótimo de forma organizada, com poda ou programação dinâmica, o que só funciona para entradas pequenas. A segunda é aceitar uma resposta um pouco pior, calculada em tempo polinomial, com um limite provado para o erro. Esses algoritmos foram implementados no repositório da equipe (Seção~\ref{sec:estudo_de_caso}).
+
+\subsection{Algoritmos Exatos}
+
+\subsubsection{\textit{Branch-and-Bound} para a Cobertura de Vértices}
+
+A ideia vem de uma observação simples. Para qualquer aresta $(u,v)$ ainda descoberta, a cobertura precisa conter $u$ ou $v$. Então a busca abre dois ramos, um com $u$ e outro com $v$. Para não explorar ramos inúteis, o algoritmo guarda a melhor cobertura já encontrada e corta (poda) todo ramo que chega ao mesmo número de vértices dela. Qualquer cobertura válida serve como limitante inicial. No pseudocódigo usamos a resposta do \texttt{APPROX-VERTEX-COVER} (Algoritmo~\ref{alg:approx_vc}), que é rápida. O código da equipe usa outro método guloso, que escolhe sempre o vértice de maior grau, e o resto da busca é igual.
+
+\begin{algorithm}[htbp]
+\caption{\texttt{BB-VERTEX-COVER}$(G)$}
+\label{alg:bb_vc}
+\KwIn{Grafo não dirigido $G = (V, E)$.}
+\KwOut{Cobertura de vértices mínima $C^*$.}
+$melhor \leftarrow$ \texttt{APPROX-VERTEX-COVER}$(G)$\;
+\texttt{BUSCA}$(\emptyset)$\;
+\Return{$melhor$}\;
+\BlankLine
+\textbf{Procedimento} \texttt{BUSCA}$(C)$\;
+\If{$|C| \ge |melhor|$}{\Return \tcp*{poda}}
+procure $(u, v) \in E$ com $u \notin C$ e $v \notin C$\;
+\If{não existe tal aresta}{$melhor \leftarrow C$\; \Return}
+\texttt{BUSCA}$(C \cup \{u\})$ \tcp*{ramo 1}
+\texttt{BUSCA}$(C \cup \{v\})$ \tcp*{ramo 2}
+\end{algorithm}
+
+A Figura~\ref{fig:arvore_bb} mostra a árvore de busca no grafo com arestas $(1,2)$, $(1,3)$, $(2,3)$ e $(3,4)$. O limitante inicial do \texttt{APPROX-VERTEX-COVER} é $\{1,2,3,4\}$, com 4 vértices. A busca acha $\{1,2,3\}$, depois $\{1,3\}$, e a partir daí poda todos os ramos com 2 vértices ou mais.
+
+\begin{figure}[htbp]
+\centering
+\resizebox{\columnwidth}{!}{%
+\begin{tikzpicture}[
+  no/.style={rectangle,rounded corners=2pt,draw,thick,align=center,font=\scriptsize,inner sep=2pt},
+  novo/.style={no,fill=green!15,draw=green!50!black},
+  poda/.style={no,fill=red!12,draw=red!60!black},
+  level distance=15mm,
+  level 1/.style={sibling distance=46mm},
+  level 2/.style={sibling distance=23mm},
+  level 3/.style={sibling distance=14mm},
+  edge from parent/.style={draw,thick,-{Stealth[length=1.6mm]}},
+  rot/.style={font=\tiny,fill=white,inner sep=1pt}]
+\node[no]{$C=\emptyset$\\escolhe $(1,2)$}
+  child{node[no]{$\{1\}$\\escolhe $(2,3)$}
+    child{node[no]{$\{1,2\}$\\escolhe $(3,4)$}
+      child{node[novo]{$\{1,2,3\}$\\$melhor{=}3$}}
+      child{node[poda]{$\{1,2,4\}$\\poda}}}
+    child{node[novo]{$\{1,3\}$\\$melhor{=}2$}}}
+  child{node[no]{$\{2\}$\\escolhe $(1,3)$}
+    child{node[poda]{$\{1,2\}$\\poda}}
+    child{node[poda]{$\{2,3\}$\\poda}}};
+\end{tikzpicture}%
+}
+\caption{Árvore do \texttt{BB-VERTEX-COVER}. Verde é uma nova melhor solução e vermelho é um ramo podado. O resultado é $C^* = \{1,3\}$.}
+\label{fig:arvore_bb}
+\end{figure}
+
+\subsubsection{Força Bruta e Held-Karp para o TSP}
+
+A força bruta fixa a cidade inicial $1$ e testa todas as ordens das outras $n-1$ cidades, e guarda a rota mais barata. O algoritmo de Held-Karp~\cite{held1962dynamic} evita refazer contas com programação dinâmica. Ele guarda em $D[S, k]$ o custo do menor caminho que sai da cidade $1$, passa exatamente pelas cidades do conjunto $S$ e termina na cidade $k \in S$.
+
+\begin{algorithm}[htbp]
+\caption{\texttt{HELD-KARP}$(n, c)$ \cite{held1962dynamic}}
+\label{alg:held_karp}
+\KwIn{$n$ cidades e custos $c(i,j)$.}
+\KwOut{Custo do tour ótimo.}
+\For{$k \leftarrow 2$ \KwTo $n$}{$D[\{k\}, k] \leftarrow c(1, k)$\;}
+\For{$s \leftarrow 2$ \KwTo $n-1$}{
+  \ForEach{$S \subseteq \{2,\dots,n\}$ com $|S| = s$}{
+    \ForEach{$k \in S$}{
+      $D[S,k] \leftarrow \min\limits_{m \in S - \{k\}} D[S - \{k\}, m] + c(m,k)$\;
+    }
+  }
+}
+\Return{$\min\limits_{k} D[\{2,\dots,n\}, k] + c(k, 1)$}\;
+\end{algorithm}
+
+O código da equipe preenche a mesma tabela $D$ na mesma ordem, do menor conjunto para o maior. Cada conjunto $S$ fica guardado como uma \textit{bitmask}, um número inteiro em que o bit $i$ vale $1$ quando a cidade $i$ está em $S$. O custo é o mesmo do Algoritmo~\ref{alg:held_karp}. A ideia é montar o caminho aos poucos. Para saber o melhor jeito de chegar em $k$ depois de visitar $S$, basta saber o melhor jeito de chegar em cada vizinho $m$ antes dele, que já está na tabela.
+
+\subsection{Algoritmos de Aproximação}
+
+Os três algoritmos desta parte vêm do Capítulo 35 de Cormen et al.~\cite{cormen2012algoritmos}. Todos tomam decisões rápidas e locais, sem voltar atrás. A garantia de qualidade de cada um é provada na Seção~\ref{sec:analise}.
+
+\subsubsection{\texttt{APPROX-VERTEX-COVER}}
+
+O algoritmo pega qualquer aresta descoberta e coloca \textit{as duas pontas} na cobertura. Parece um desperdício, já que uma ponta bastaria, mas é essa escolha que permite provar o fator 2.
 
 \begin{algorithm}[htbp]
 \caption{\texttt{APPROX-VERTEX-COVER}$(G)$ \cite{cormen2012algoritmos}}
@@ -428,13 +518,257 @@ $E' \leftarrow E[G]$\;
 \Return{$C$}\;
 \end{algorithm}
 
+A Figura~\ref{fig:fluxo_vc} mostra o laço como fluxograma e a Figura~\ref{fig:passos_vc} mostra a execução no grafo da Figura 35.1 de Cormen et al.~\cite{cormen2012algoritmos}.
+
+\begin{figure}[htbp]
+\centering
+\begin{tikzpicture}[node distance=4mm,
+  caixa/.style={rectangle,rounded corners=2pt,draw,thick,align=center,minimum height=7mm,text width=3.1cm,font=\scriptsize},
+  decisao/.style={diamond,draw,thick,aspect=2.2,align=center,inner sep=1pt,font=\scriptsize},
+  seta/.style={-{Stealth[length=2mm]},thick}]
+\node[caixa] (ini) {Início: $C=\emptyset$, $E'=E$};
+\node[decisao,below=of ini] (dec) {$E' = \emptyset$?};
+\node[caixa,below=of dec] (esc) {Escolhe $(u,v) \in E'$};
+\node[caixa,below=of esc] (add) {Põe $u$ e $v$ em $C$};
+\node[caixa,below=of add] (rem) {Tira de $E'$ as arestas que tocam $u$ ou $v$};
+\node[caixa,text width=1.6cm,right=7mm of dec] (fim) {Retorna $C$};
+\draw[seta] (ini) -- (dec);
+\draw[seta] (dec) -- node[right,font=\scriptsize]{não} (esc);
+\draw[seta] (dec) -- node[above,font=\scriptsize]{sim} (fim);
+\draw[seta] (esc) -- (add);
+\draw[seta] (add) -- (rem);
+\draw[seta] (rem.west) -- ++(-5mm,0) |- (dec.west);
+\end{tikzpicture}
+\caption{Fluxograma do \texttt{APPROX-VERTEX-COVER}.}
+\label{fig:fluxo_vc}
+\end{figure}
+
+\newcommand{\grafoVC}[5]{%
+% #1 deslocamento, #2 vértices em C, #3 arestas escolhidas, #4 arestas cobertas, #5 legenda
+\begin{scope}[shift={#1}]
+  \foreach \n/\x/\y in {a/0/1,b/1/1,c/2/1,d/3/1,e/2/0,f/3/0,g/4/0}{\coordinate (\n) at (\x,\y);}
+  \foreach \u/\v in {a/b,b/c,c/d,c/e,d/e,d/f,d/g,e/f}{\draw[thick,gray!70] (\u) -- (\v);}
+  \foreach \u/\v in {#4}{\draw[white,line width=2pt] (\u) -- (\v); \draw[thick,gray!55,dashed] (\u) -- (\v);}
+  \foreach \u/\v in {#3}{\draw[line width=2.2pt,blue!70!black] (\u) -- (\v);}
+  \foreach \n in {a,b,c,d,e,f,g}{\node[circle,draw,thick,minimum size=6mm,inner sep=0pt,fill=white,font=\small] at (\n) {$\n$};}
+  \foreach \n in {#2}{\node[circle,draw=blue!70!black,thick,minimum size=6mm,inner sep=0pt,fill=blue!25,font=\small] at (\n) {$\n$};}
+  \node[font=\small,align=center,text width=4.6cm] at (2,-0.85) {#5};
+\end{scope}}
+
+\begin{figure}[htbp]
+\centering
+\resizebox{\columnwidth}{!}{%
+\begin{tikzpicture}
+\grafoVC{(0,0)}{}{}{}{(a) Grafo inicial, $C=\emptyset$.}
+\grafoVC{(5.5,0)}{b,c}{b/c}{a/b,c/d,c/e}{(b) Escolhe $(b,c)$. Saem $ab$, $cd$, $ce$.}
+\grafoVC{(0,-3)}{b,c,e,f}{b/c,e/f}{a/b,c/d,c/e,d/e,d/f}{(c) Escolhe $(e,f)$. Saem $de$, $df$.}
+\grafoVC{(5.5,-3)}{b,c,d,e,f,g}{b/c,e/f,d/g}{a/b,c/d,c/e,d/e,d/f}{(d) Escolhe $(d,g)$. Fim, $|C| = 6$.}
+\end{tikzpicture}%
+}
+\caption{Execução do \texttt{APPROX-VERTEX-COVER}. Vértices azuis estão em $C$, arestas grossas são as escolhidas e arestas tracejadas já foram cobertas. A cobertura ótima é $\{b,d,e\}$, com 3 vértices, então o algoritmo usou exatamente o dobro.}
+\label{fig:passos_vc}
+\end{figure}
+
+\subsubsection{\texttt{APPROX-TSP-TOUR}}
+
+Este algoritmo só tem garantia quando os custos obedecem à \textit{desigualdade triangular}, $c(u,w) \le c(u,v) + c(v,w)$. Em palavras, ir direto de $u$ para $w$ nunca custa mais do que passar por $v$ no meio, como acontece com distâncias em linha reta num mapa. Primeiro ele monta a Árvore Geradora Mínima (MST). Depois percorre a árvore em pré-ordem e visita as cidades na ordem em que elas aparecem, com volta ao início no final.
+
+\begin{algorithm}[htbp]
+\caption{\texttt{APPROX-TSP-TOUR}$(G, c)$ \cite{cormen2012algoritmos}}
+\label{alg:approx_tsp}
+\KwIn{Grafo completo $G = (V, E)$ com custos $c$ que obedecem à desigualdade triangular.}
+\KwOut{Ciclo hamiltoniano $H$ com $c(H) \le 2\,c(H^*)$.}
+Escolha um vértice $r \in V$ como raiz\;
+$T \leftarrow$ \texttt{MST-PRIM}$(G, c, r)$\;
+$L \leftarrow$ vértices de $T$ em pré-ordem a partir de $r$\;
+$H \leftarrow L$ seguida de $r$\;
+\Return{$H$}\;
+\end{algorithm}
+
+\newcommand{\pontosTSP}{%
+  \coordinate (a) at (0,0); \coordinate (b) at (1,2); \coordinate (c) at (3,3);
+  \coordinate (d) at (4,1); \coordinate (e) at (2.5,0.5); \coordinate (f) at (5,3);}
+\newcommand{\nosTSP}{%
+  \foreach \n in {a,b,c,d,e,f}{\node[circle,draw,thick,minimum size=6mm,inner sep=0pt,fill=white,font=\small] at (\n) {$\n$};}}
+
+\begin{figure}[htbp]
+\centering
+\resizebox{\columnwidth}{!}{%
+\begin{tikzpicture}
+\begin{scope}
+\pontosTSP
+\foreach \u/\v in {a/b,b/e,b/c,e/d,c/f}{\draw[line width=2.2pt,blue!70!black] (\u)--(\v);}
+\nosTSP
+\node[font=\small] at (2.5,-1) {(a) MST com raiz $a$};
+\end{scope}
+\begin{scope}[xshift=6.3cm]
+\pontosTSP
+\foreach \u/\v in {a/b,b/e,b/c,e/d,c/f}{\draw[gray!35,thick] (\u)--(\v);}
+\foreach \u/\v in {a/b,b/c,c/f,f/e,e/d,d/a}{\draw[-{Stealth[length=2.5mm]},thick,red!70!black] (\u)--(\v);}
+\nosTSP
+\node[font=\small] at (2.5,-1) {(b) Tour $a,b,c,f,e,d,a$};
+\end{scope}
+\end{tikzpicture}%
+}
+\caption{Execução do \texttt{APPROX-TSP-TOUR} com distância euclidiana. A pré-ordem da MST é $a,b,c,f,e,d$. O tour custa cerca de $15{,}7$ e o ótimo ($a,b,c,f,d,e,a$) custa cerca de $12{,}8$, uma razão de $1{,}22$, abaixo do limite $2$.}
+\label{fig:passos_tsp}
+\end{figure}
+
+Repare no salto de $f$ para $e$ na Figura~\ref{fig:passos_tsp}(b). Na árvore, o caminho de $f$ até $e$ passa por $c$ e $b$. O tour corta caminho e vai direto, e a desigualdade triangular garante que esse atalho não aumenta o custo. Esse é o ponto chave da prova na Seção~\ref{sec:analise}.
+
+\subsubsection{\texttt{GREEDY-SET-COVER}}
+
+Na Cobertura de Conjuntos, a entrada é um conjunto $X$ e uma família $\mathcal{F}$ de subconjuntos de $X$. O algoritmo guloso escolhe, a cada rodada, o subconjunto que cobre o \textit{maior número de elementos ainda descobertos}.
+
+\begin{algorithm}[htbp]
+\caption{\texttt{GREEDY-SET-COVER}$(X, \mathcal{F})$ \cite{cormen2012algoritmos}}
+\label{alg:greedy_sc}
+\KwIn{Conjunto $X$ e família $\mathcal{F}$ de subconjuntos de $X$.}
+\KwOut{Família $\mathcal{C} \subseteq \mathcal{F}$ que cobre $X$.}
+$U \leftarrow X$ \tcp*{elementos que faltam}
+$\mathcal{C} \leftarrow \emptyset$\;
+\While{$U \neq \emptyset$}{
+  Escolha $S \in \mathcal{F}$ que maximiza $|S \cap U|$\;
+  $U \leftarrow U - S$\;
+  $\mathcal{C} \leftarrow \mathcal{C} \cup \{S\}$\;
+}
+\Return{$\mathcal{C}$}\;
+\end{algorithm}
+
+A Tabela~\ref{tab:passos_sc} mostra um caso em que o guloso \textit{não} acha o ótimo. Temos $X = \{1,\dots,6\}$, $A = \{1,2,3\}$, $B = \{4,5,6\}$ e $D = \{1,2,4,5\}$. O ótimo é $\{A, B\}$, mas o guloso começa por $D$, que cobre quatro elementos, e depois precisa de mais dois conjuntos. Ele olha só para a rodada atual e não percebe que $D$ atrapalha a escolha melhor.
+
+\begin{table}[htbp]
+\centering
+\caption{Execução do \texttt{GREEDY-SET-COVER}. Cada coluna mostra quantos elementos novos o conjunto cobriria na rodada.}
+\label{tab:passos_sc}
+\footnotesize
+\begin{tabular}{@{}cccccc@{}}
+\toprule
+Rodada & $U$ antes & $|A \cap U|$ & $|B \cap U|$ & $|D \cap U|$ & Escolhe \\
+\midrule
+1 & $\{1,\dots,6\}$ & 3 & 3 & \textbf{4} & $D$ \\
+2 & $\{3,6\}$ & \textbf{1} & 1 & 0 & $A$ \\
+3 & $\{6\}$ & 0 & \textbf{1} & 0 & $B$ \\
+\bottomrule
+\end{tabular}
+\end{table}
+
 % ==========================================================================
 % SEÇÃO IV - ANÁLISE ASSINTÓTICA RIGOROSA (PESSOA 2 - ISSUE #6)
 % ==========================================================================
 \section{Análise Assintótica Rigorosa (Custos)}
 \label{sec:analise}
 
-% Seção reservada para a Pessoa 2 (Maria Eduarda).
+Nesta seção medimos o custo de tempo e de memória de cada algoritmo da Seção~\ref{sec:paradigma} e depois provamos os fatores de aproximação. Usamos $|V|$ e $|E|$ para grafos e $n$ para o número de cidades do TSP. Quando falamos de memória, contamos só o espaço \textit{extra}, além da própria entrada.
+
+\subsection{As Notações $O$, $\Omega$ e $\Theta$}
+
+O tempo em segundos muda de máquina para máquina, então o que interessa é como o custo \textit{cresce} quando a entrada cresce~\cite{cormen2012algoritmos}.
+
+\begin{definicao}[Notações assintóticas \cite{cormen2012algoritmos}]
+Para funções $f(n)$ e $g(n)$ positivas:
+$f(n) = O(g(n))$ se existem $c > 0$ e $n_0$ com $f(n) \le c\,g(n)$ para todo $n \ge n_0$;
+$f(n) = \Omega(g(n))$ se existem $c > 0$ e $n_0$ com $f(n) \ge c\,g(n)$ para todo $n \ge n_0$;
+e $f(n) = \Theta(g(n))$ se valem as duas ao mesmo tempo.
+\end{definicao}
+
+Um jeito fácil de lembrar é ler $O$ como ``no máximo'', $\Omega$ como ``no mínimo'' e $\Theta$ como ``exatamente nessa ordem''. Por exemplo, $f(n) = 3n^2 + 5n$ é $\Theta(n^2)$. Com $c = 4$ e $n_0 = 5$ temos $3n^2 + 5n \le 4n^2$, e com $c = 3$ temos $3n^2 + 5n \ge 3n^2$ para todo $n \ge 1$.
+
+\subsection{Custo dos Algoritmos Exatos}
+
+\textit{Cobertura de Vértices por força bruta.} Como visto na Seção~\ref{sec:fundamentacao}, existem $2^{|V|}$ subconjuntos, e o verificador gasta $O(|V| + |E|)$ em cada um. O tempo é $O(2^{|V|} \cdot |E|)$ para grafos sem vértices isolados, e a memória extra é $O(|V|)$ para marcar o subconjunto atual.
+
+\textit{\texttt{BB-VERTEX-COVER}.} Seja $k$ o tamanho do limitante inicial. Cada chamada de \texttt{BUSCA} põe um vértice a mais em $C$, e a poda corta quando $|C|$ chega em $k$. Então todo nó que não é podado tem $|C| < k$, ou seja, fica a uma profundidade menor que $k$. Como cada nó abre no máximo dois filhos, existem menos de $2^{k}$ desses nós. Em cada um deles a procura da aresta descoberta percorre $E$, o que custa $O(|E|)$, e cada nó podado custa só $O(1)$. Assim,
+\begin{equation}
+T_{BB}(G) = O(2^{k} \cdot |E|).
+\end{equation}
+Com o limitante do \texttt{APPROX-VERTEX-COVER} temos $k \le 2|C^*|$ (Teorema~\ref{teo:approx_vc}), então o custo depende do tamanho da resposta e não do número de vértices. O guloso por grau do código não tem essa garantia de fator 2, então lá o valor de $k$ depende da instância. A memória extra é $O(|V|)$, pois a pilha da recursão tem altura menor que $k \le |V|$ e $C$ é um vetor de marcação. No pior caso, porém, $k$ cresce junto com $|V|$ e o tempo volta a ser exponencial.
+
+\textit{TSP por força bruta.} Com a cidade $1$ fixa, existem $(n-1)!$ ordens, e somar o custo de cada rota leva $\Theta(n)$. O tempo é $\Theta(n \cdot (n-1)!) = \Theta(n!)$. O código testa todas as $(n-1)!$ ordens. Se ele descartasse as rotas no sentido contrário, sobrariam $(n-1)!/2$, mas a ordem de crescimento seria a mesma. A memória extra é $O(n)$ para a permutação atual.
+
+\textit{\texttt{HELD-KARP}.} A tabela $D$ tem um valor para cada par $(S, k)$ com $S \subseteq \{2,\dots,n\}$ e $k \in S$, ou seja, no máximo $(n-1)\,2^{n-1}$ valores. Cada valor testa no máximo $n$ vizinhos $m$. Logo,
+\begin{equation}
+T_{HK}(n) = \Theta(n^2\, 2^n), \qquad M_{HK}(n) = \Theta(n\, 2^n).
+\end{equation}
+É muito mais rápido que $n!$, mas troca tempo por memória, que agora também cresce de forma exponencial. Isso explica o estouro de memória RAM nos experimentos. Com $n = 22$ a tabela tem mais de $2 \times 10^7$ valores e com $n = 25$ passa de $2 \times 10^8$, e em Python cada valor ocupa dezenas de bytes. A Tabela~\ref{tab:crescimento_combinatorio} compara essas funções em segundos.
+
+\subsection{Custo dos Algoritmos de Aproximação}
+
+\textit{\texttt{APPROX-VERTEX-COVER}.} Com listas de adjacência, cada aresta sai de $E'$ uma única vez e cada vértice entra em $C$ no máximo uma vez. O tempo é $O(|V| + |E|)$~\cite{cormen2012algoritmos} e a memória extra é $O(|V|)$ para marcar os vértices de $C$, pois uma aresta está em $E'$ se e somente se nenhuma das suas pontas está marcada.
+
+\textit{\texttt{APPROX-TSP-TOUR}.} O grafo é completo, então $|E| = \Theta(n^2)$. O passo mais caro é o \texttt{MST-PRIM}. Na versão com vetor simples ele faz $n$ rodadas, e cada rodada procura o menor valor entre $n$ cidades, o que dá $\Theta(n^2)$. A pré-ordem é uma busca em profundidade numa árvore de $n-1$ arestas e custa $\Theta(n)$. O total é $\Theta(n^2)$~\cite{cormen2012algoritmos}. Se as distâncias forem calculadas a partir das coordenadas, a memória extra é $O(n)$ para os vetores de chave e de pai do Prim e para a lista $L$.
+
+\textit{\texttt{GREEDY-SET-COVER}.} O laço roda no máximo $\min(|X|, |\mathcal{F}|)$ vezes, pois cada rodada cobre pelo menos um elemento novo e usa um conjunto que ainda não estava em $\mathcal{C}$. Cada rodada calcula $|S \cap U|$ para todos os conjuntos, com custo $O(|X|\,|\mathcal{F}|)$. Logo~\cite{cormen2012algoritmos},
+\begin{equation}
+T_{GSC} = O\big(|X|\,|\mathcal{F}| \min(|X|, |\mathcal{F}|)\big).
+\end{equation}
+A memória extra é $O(|X|)$ para o conjunto $U$ e para $\mathcal{C}$, que tem no máximo $|X|$ conjuntos.
+
+Os três custos são polinomiais. Essa é a grande vantagem das aproximações sobre os métodos exatos, e a Tabela do Apêndice~\ref{ap:cheatsheet} resume todos os custos lado a lado.
+
+\subsection{Provas dos Fatores de Aproximação}
+
+Um algoritmo tem fator de aproximação $\rho(n)$ quando o custo $C$ da sua resposta e o ótimo $C^*$ obedecem a $\max(C/C^*,\, C^*/C) \le \rho(n)$ para toda entrada de tamanho $n$~\cite{cormen2012algoritmos}. Em problemas de minimização isso é o mesmo que $C \le \rho(n) \cdot C^*$. Um fator 2 quer dizer que a resposta custa no máximo o dobro da melhor possível.
+
+\begin{teorema}[Teorema 35.1 de Cormen et al. \cite{cormen2012algoritmos}]
+\label{teo:approx_vc}
+O \texttt{APPROX-VERTEX-COVER} é uma 2-aproximação de tempo polinomial.
+\end{teorema}
+
+\begin{proof}
+O tempo $O(|V| + |E|)$ já foi mostrado. A resposta é uma cobertura válida, pois o laço só termina quando $E' = \emptyset$, e uma aresta só sai de $E'$ quando uma de suas pontas entra em $C$.
+
+Seja $A$ o conjunto das arestas escolhidas na linha 4 do Algoritmo~\ref{alg:approx_vc}. Quando $(u,v)$ é escolhida, todas as arestas que tocam $u$ ou $v$ saem de $E'$. Então duas arestas de $A$ nunca têm ponta em comum, ou seja, $A$ é um \textit{emparelhamento}. Ele é \textit{maximal} porque não dá para colocar mais nenhuma aresta de $E$ em $A$ sem repetir uma ponta. Na Figura~\ref{fig:passos_vc}, por exemplo, $A = \{(b,c), (e,f), (d,g)\}$ e as seis pontas são todas diferentes.
+
+Toda cobertura ótima $C^*$ precisa ter pelo menos uma ponta de cada aresta de $A$. Como essas arestas não dividem pontas, um mesmo vértice de $C^*$ não cobre duas delas. Logo $|C^*| \ge |A|$. Cada aresta de $A$ coloca dois vértices novos em $C$, então $|C| = 2|A|$. Com as duas desigualdades, $|C| = 2|A| \le 2|C^*|$.
+\end{proof}
+
+O detalhe interessante dessa prova é que ela nunca precisa saber quem é $C^*$. Basta saber que ele não pode ser menor que $|A|$.
+
+\begin{teorema}[Teorema 35.2 de Cormen et al. \cite{cormen2012algoritmos}]
+\label{teo:approx_tsp}
+Com custos que obedecem à desigualdade triangular, o \texttt{APPROX-TSP-TOUR} é uma 2-aproximação de tempo polinomial.
+\end{teorema}
+
+\begin{proof}
+O tempo $\Theta(n^2)$ já foi mostrado. Sejam $H^*$ um tour ótimo e $T$ a MST.
+
+\textit{Passo 1.} Ao tirar uma aresta de $H^*$, sobra um caminho que liga todas as cidades, e esse caminho é uma árvore geradora. Como os custos não são negativos e $T$ é a árvore geradora mais barata, $c(T) \le c(H^*)$.
+
+\textit{Passo 2.} Seja $W$ o passeio completo pela árvore, que desce por cada aresta e volta por ela. Na Figura~\ref{fig:passos_tsp}, $W = a,b,c,f,c,b,e,d,e,b,a$. Cada aresta de $T$ aparece duas vezes, então $c(W) = 2\,c(T)$.
+
+\textit{Passo 3.} O tour $H$ é o próprio $W$ sem as visitas repetidas. Cada vez que um vértice repetido sai, um trecho $u \to v \to w$ vira a aresta direta $u \to w$, e pela desigualdade triangular o custo não aumenta. Logo $c(H) \le c(W)$.
+
+Com os três passos, $c(H) \le c(W) = 2\,c(T) \le 2\,c(H^*)$.
+\end{proof}
+
+A hipótese da desigualdade triangular é essencial. Pelo Teorema 35.3 de Cormen et al.~\cite{cormen2012algoritmos}, se $\text{P} \neq \text{NP}$, não existe aproximação de tempo polinomial com nenhum fator constante $\rho \ge 1$ para o TSP geral. A ideia da prova é que um algoritmo assim conseguiria decidir \texttt{HAM-CYCLE}, que é NP-Completo (Seção~\ref{sec:fundamentacao}). Esse é um exemplo direto de como a questão $\text{P} \neq \text{NP}$ limita até as aproximações.
+
+Para a Cobertura de Conjuntos o fator não é constante. Ele usa o número harmônico $H(d) = \sum_{i=1}^{d} 1/i \le \ln d + 1$.
+
+\begin{teorema}[Teorema 35.4 e Corolário 35.5 de Cormen et al. \cite{cormen2012algoritmos}]
+\label{teo:greedy_sc}
+O \texttt{GREEDY-SET-COVER} é uma $H(d)$-aproximação de tempo polinomial, em que $d = \max\{|S| : S \in \mathcal{F}\}$. Em particular, o fator é no máximo $\ln|X| + 1$.
+\end{teorema}
+
+\begin{proof}
+A ideia é dividir o custo de cada conjunto escolhido entre os elementos que ele cobriu pela primeira vez. Se o guloso escolhe um conjunto que cobre $t$ elementos novos, cada um deles recebe o preço $c_x = 1/t$. Como cada conjunto escolhido distribui exatamente $1$, vale $|\mathcal{C}| = \sum_{x \in X} c_x$.
+
+Agora fixe qualquer $S \in \mathcal{F}$ e olhe para os seus elementos na ordem em que foram cobertos. Suponha que, num certo momento, ainda faltam $u$ elementos de $S$. Nesse momento o próprio $S$ cobriria $u$ elementos novos, então o guloso escolheu um conjunto que cobre \textit{pelo menos} $u$ elementos novos. Assim o próximo elemento de $S$ a ser coberto paga no máximo $1/u$. O primeiro paga no máximo $1/|S|$, o segundo no máximo $1/(|S|-1)$, e assim até o último, que paga no máximo $1$. Somados, os preços dão
+\begin{equation}
+\sum_{x \in S} c_x \le \frac{1}{|S|} + \frac{1}{|S|-1} + \dots + 1 = H(|S|) \le H(d).
+\end{equation}
+
+A cobertura ótima $\mathcal{C}^*$ contém cada elemento de $X$ em pelo menos um de seus conjuntos. Portanto
+\begin{equation}
+|\mathcal{C}| = \sum_{x \in X} c_x \le \sum_{S \in \mathcal{C}^*} \sum_{x \in S} c_x \le |\mathcal{C}^*| \cdot H(d).
+\end{equation}
+Como $d \le |X|$, segue que $H(d) \le \ln|X| + 1$.
+\end{proof}
+
+No exemplo da Tabela~\ref{tab:passos_sc}, o maior conjunto tem $d = 4$, então a garantia é $H(4) \approx 2{,}08$. O guloso usou 3 conjuntos contra 2 do ótimo, uma razão de $1{,}5$, dentro do limite. As razões medidas no repositório (Seção~\ref{sec:conclusao}) também ficaram abaixo de todos os limites provados aqui.
+
+Quando nem uma garantia como essas é conhecida, como no \textit{Molecular Docking}, que é um problema contínuo, a saída são as metaheurísticas da Seção~\ref{sec:estudo_de_caso}. Elas costumam achar boas respostas na prática, mas sem prova de quão perto do ótimo ficam.
 
 % ==========================================================================
 % SEÇÃO V - ESTUDO DE CASO E IMPLEMENTAÇÃO PRÁTICA (PESSOA 2 E 5)
@@ -488,7 +822,32 @@ Por fim, no problema contínuo inspirado em \textit{Molecular Docking} \cite{pag
 Quando um problema tem verificação rápida em tempo polinomial ($\text{NP}$), mas achar o ótimo exato sofre explosão combinatória ($\text{NP-Completo}$), usam-se métodos exatos com poda apenas para entradas pequenas e recorre-se a aproximações (com limite $\rho(n)$) ou metaheurísticas para entradas maiores.
 
 \subsection*{b) Quando Utilizar Cada Abordagem?}
-% Espaço reservado para o diagrama de decisão da Pessoa 2 (Issue #7).
+\begin{center}
+\resizebox{\columnwidth}{!}{%
+\begin{tikzpicture}[
+  node distance=4mm and 6mm,
+  q/.style={diamond,draw,thick,aspect=2.4,align=center,inner sep=1pt,font=\scriptsize},
+  r/.style={rectangle,rounded corners=2pt,draw,thick,align=center,text width=2.8cm,minimum height=7mm,font=\scriptsize},
+  seta/.style={-{Stealth[length=2mm]},thick},
+  lab/.style={font=\tiny}]
+\node[r] (p) {Problema de otimização};
+\node[q,below=of p] (q1) {Está em P?};
+\node[r,fill=green!12,right=of q1] (r1) {Algoritmo polinomial exato (ex: Dijkstra, Prim)};
+\node[q,below=of q1] (q2) {$n$ pequeno?\\($n \le 20$)};
+\node[r,fill=green!12,right=of q2] (r2) {Exato: \textit{Branch-and-Bound} ou Held-Karp};
+\node[q,below=of q2] (q3) {Existe fator $\rho$\\conhecido?};
+\node[r,fill=blue!10,right=of q3] (r3) {Aproximação do Cap. 35 (limite $\rho$ provado)};
+\node[r,fill=orange!15,below=of q3] (r4) {Metaheurística, como \textit{Simulated Annealing} (sem garantia)};
+\draw[seta] (p) -- (q1);
+\draw[seta] (q1) -- node[above,lab]{sim} (r1);
+\draw[seta] (q1) -- node[left,lab]{não} (q2);
+\draw[seta] (q2) -- node[above,lab]{sim} (r2);
+\draw[seta] (q2) -- node[left,lab]{não} (q3);
+\draw[seta] (q3) -- node[above,lab]{sim} (r3);
+\draw[seta] (q3) -- node[left,lab]{não} (r4);
+\end{tikzpicture}%
+}
+\end{center}
 
 \subsection*{c) Tabela Resumo de Complexidades}
 \noindent
@@ -504,7 +863,7 @@ Vertex Cover (Branch-and-Bound) & $O(2^k \cdot |E|)$ & $O(n)$ & Ótimo ($C^*$) \
 TSP (Força Bruta) & $\Theta((n-1)! \cdot n)$ & $O(n)$ & Ótimo ($C^*$) \\
 TSP (Held-Karp / PD) & $\Theta(n^2 2^n)$ & $\Theta(n 2^n)$ & Ótimo ($C^*$) \\
 \texttt{APPROX-VERTEX-COVER} & $O(|V| + |E|)$ & $O(|V|)$ & $\rho = 2$ \\
-\texttt{APPROX-TSP-TOUR} & $O(n^2)$ & $O(n)$ & $\rho = 2$ (métrico) \\
+\texttt{APPROX-TSP-TOUR} & $\Theta(n^2)$ & $O(n)$ & $\rho = 2$ (métrico) \\
 \texttt{GREEDY-SET-COVER} & $O(|X|\,|\mathcal{F}|\min(|X|,|\mathcal{F}|))$ & $O(|X|)$ & $\rho = H(d)$ \\
 \textit{Simulated Annealing} & $O(A \cdot C)$ & $O(1)$ & Empírica \\
 \bottomrule
@@ -512,6 +871,28 @@ TSP (Held-Karp / PD) & $\Theta(n^2 2^n)$ & $\Theta(n 2^n)$ & Ótimo ($C^*$) \\
 }
 
 \subsection*{d) Esqueleto Base da Técnica}
-% Espaço reservado para o esqueleto de pseudocódigo da Pessoa 2 (Issue #7).
+Todos os algoritmos de aproximação gulosos deste trabalho seguem o mesmo modelo, que aparece no Algoritmo~\ref{alg:esqueleto}, e todas as provas de fator seguem os passos abaixo.
+
+\noindent\textit{Esqueleto da prova do fator $\rho$:}
+\begin{enumerate}
+  \item Ache um limite inferior $L$ para o ótimo sem calcular o ótimo, como $|A|$ no \textit{Vertex Cover} ou $c(T)$ no TSP.
+  \item Mostre que $L \le C^*$.
+  \item Mostre que a resposta do algoritmo vale $C \le \rho \cdot L$.
+  \item Conclua que $C \le \rho \cdot L \le \rho \cdot C^*$.
+\end{enumerate}
+
+\begin{algorithm}[!htbp]
+\caption{Esqueleto de uma aproximação gulosa}
+\label{alg:esqueleto}
+\KwIn{Instância $I$ de um problema de minimização.}
+\KwOut{Solução viável $sol$ com $C \le \rho \cdot C^*$.}
+$sol \leftarrow \emptyset$\;
+\While{$sol$ ainda não é viável}{
+  Escolha o item de maior ganho local\;
+  $sol \leftarrow sol \cup \{item\}$\;
+  Atualize o que ainda falta resolver\;
+}
+\Return{$sol$}\;
+\end{algorithm}
 
 \end{document}
