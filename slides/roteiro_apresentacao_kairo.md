@@ -42,16 +42,12 @@
 
 ---
 
-### Minuto 6:00 – 7:15 | Demonstração Prática ao Vivo (Slide 8 e Terminal)
-- **O que fazer e falar:**
-  > *"Vou executar agora, ao vivo no terminal, o nosso script de demonstração de explosão combinatória:"*  
-  *(Digitar no terminal: `python benchmarks/demo_combinatorial_explosion.py`)*  
-  > *"Observem a tela:  
-  > Com 8 cidades, ambos rodam instantaneamente.  
-  > Com 10 cidades, a força bruta já demora quase 1 segundo, enquanto o Held-Karp roda em 5 milissegundos — uma aceleração de mais de 160 vezes!  
-  > Com 11 cidades, a força bruta já congela o terminal por mais de 10 segundos, enquanto o Held-Karp resolve em 9 milissegundos.  
-  > E logo abaixo, vejam a verificação do certificado: validar a rota ótima para 12 cidades levou apenas 35 microssegundos."*
-
+### Minuto 6:00 – 7:15 | Demonstração Prática: Gráfico da Explosão Combinatória (Slide 8)
+- **O que falar:**
+  > *"Para demonstrar esse fenômeno na prática, sintetizamos nossas medições e projeções teóricas no gráfico exibido na tela:*  
+  > *No painel esquerdo, temos as medições reais de tempo executadas no hardware do nosso projeto. Observem como a curva vermelha da Força Bruta decola vertiginosamente: com 10 cidades ela já beira 1 segundo, e com 11 cidades ela congela o terminal por mais de 10 segundos! Em contrapartida, a curva azul do Held-Karp permanece comportada na casa dos milissegundos — sendo 243 vezes mais rápida em n = 10 e resolvendo 12 cidades em apenas 21 milissegundos.*  
+  > *E na linha verde na base do gráfico, vejam a verificação do certificado: validar a rota ótima levou meros 26 microssegundos, comprovando a assimetria polinomial de NP.*  
+  > *Agora olhem para o painel direito: quando projetamos a teoria para um supercomputador de 1 GHz, a Força Bruta cruza a linha de 1 ano em apenas 19 cidades, e com 26 cidades ela supera a Idade do Universo observável (13,8 bilhões de anos). Entramos em uma zona de impossibilidade física absoluta."*
 ---
 
 ### Minuto 7:15 – 8:00 | Conexão com o Estudo de Caso Real e Gancho para os Colegas (Slide 9 e 10)

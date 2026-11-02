@@ -149,18 +149,12 @@ Medições reais realizadas no hardware da máquina do projeto:
 
 ---
 
-# 8. Demonstração ao Vivo no Seminário
+# 8. Demonstração: Explosão Combinatória e Intratabilidade
 
-Execução interativa ao vivo via terminal:
-```bash
-python benchmarks/demo_combinatorial_explosion.py
-```
+![width:1150px](../benchmarks/plots/explosao_combinatoria_demonstracao.png)
 
-### O que o público verá:
-1. Impressão da progressão matemática e cálculo de tempo em anos.
-2. Execução das instâncias em tempo real no terminal até a força bruta congelar.
-3. Execução dos verificadores polinomiais aceitando e rejeitando certificados em microssegundos ($35.5\ \mu\text{s}$).
-
+- **Painel Esquerdo (Medições Reais):** Held-Karp é **243x mais rápido** em $n=10$, enquanto a Força Bruta congela (>10s) a partir de $n=11$. O verificador polinomial valida o certificado em apenas **$26\ \mu\text{s}$**.
+- **Painel Direito (Tempo Teórico em 1 GHz):** A partir de **$n = 26$ cidades**, a Força Bruta ultrapassa a **Idade do Universo ($13{,}8$ bilhões de anos)**.
 ---
 
 # 9. Conexão com o Mundo Real: Triagem de Fármacos e *Molecular Docking*
