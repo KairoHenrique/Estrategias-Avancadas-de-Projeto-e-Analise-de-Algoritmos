@@ -49,7 +49,7 @@ Estratégias Avançadas de Projeto e Análise de Algoritmos (Prof. Michel Pires 
 \maketitle
 
 \begin{abstract}
-Este trabalho estuda os problemas NP-Completos e os métodos usados para lidar com o alto custo computacional de resolvê-los, tendo como base os Capítulos 34 e 35 do livro de Cormen et al. Na parte teórica, são apresentadas as classes P, NP, NP-Difícil e NP-Completo, a verificação em tempo polinomial por certificados, a discussão sobre $\text{P} \neq \text{NP}$, as reduções polinomiais ($\text{CIRCUIT-SAT} \le_P \text{SAT} \le_P \text{3-CNF-SAT} \le_P \text{CLIQUE} \le_P \text{VERTEX-COVER} \le_P \text{HAM-CYCLE} \le_P \text{TSP}$) e o cálculo da explosão combinatória. Na parte prática, são comparadas três estratégias implementadas em Python: algoritmos exatos (Força Bruta, \textit{Branch-and-Bound} e Held-Karp), algoritmos de aproximação (\texttt{APPROX-VERTEX-COVER}, \texttt{APPROX-TSP-TOUR} e \texttt{GREEDY-SET-COVER}) e a metaheurística \textit{Simulated Annealing} aplicada a um modelo simplificado de \textit{Molecular Docking}.
+Este trabalho estuda os problemas NP-Completos e os métodos usados para lidar com o alto custo computacional de resolvê-los, com base nos Capítulos 34 e 35 do livro de Cormen et al. Na parte teórica, são apresentadas as classes P, NP, NP-Difícil e NP-Completo, a verificação em tempo polinomial por certificados, a discussão sobre $\text{P} \neq \text{NP}$, as reduções polinomiais ($\text{CIRCUIT-SAT} \le_P \text{SAT} \le_P \text{3-CNF-SAT} \le_P \text{CLIQUE} \le_P \text{VERTEX-COVER} \le_P \text{HAM-CYCLE} \le_P \text{TSP}$) e o cálculo da explosão combinatória. Na parte prática, são comparadas três estratégias implementadas em Python: algoritmos exatos (Força Bruta, \textit{Branch-and-Bound} e Held-Karp), algoritmos de aproximação (\texttt{APPROX-VERTEX-COVER}, \texttt{APPROX-TSP-TOUR} e \texttt{GREEDY-SET-COVER}) e a metaheurística \textit{Simulated Annealing} aplicada a um modelo simplificado de \textit{Molecular Docking}.
 \end{abstract}
 
 \begin{IEEEkeywords}
@@ -64,9 +64,9 @@ NP-Completude, Reduções Polinomiais, Explosão Combinatória, Algoritmos de Ap
 
 Vários problemas clássicos de grafos possuem algoritmos exatos e rápidos. Para achar o menor caminho entre dois vértices com pesos não negativos, o algoritmo de Dijkstra resolve o problema em tempo $O(|E| + |V|\log|V|)$. Para conectar todos os vértices com o menor peso total de arestas, Prim e Kruskal encontram a Árvore Geradora Mínima em $O(|E|\log|V|)$ \cite{cormen2012algoritmos}. Nesses casos, o tempo de execução cresce de forma polinomial e permite processar grafos grandes em poucos segundos.
 
-Por outro lado, existem problemas parecidos que não têm algoritmo eficiente conhecido. Se mudarmos o problema de caminhos mínimos para obrigar que a rota passe por todas as $n$ cidades exatamente uma vez e volte ao início com o menor custo, temos o Problema do Caixeiro-Viajante (\textit{Traveling Salesperson Problem} -- TSP). Situação parecida acontece na Cobertura de Vértices (\textit{Vertex Cover}), em que buscamos o menor conjunto de vértices que cubra todas as arestas do grafo, na Cobertura de Conjuntos (\textit{Set Cover}) e no problema de encaixe molecular (\textit{Molecular Docking}) \cite{pagadala2017software,huang2018comprehensive}, onde se busca a posição e a rotação de uma molécula que minimizem a energia de ligação com uma proteína.
+Por outro lado, existem problemas parecidos que não têm algoritmo eficiente conhecido. Se mudarmos o problema de caminhos mínimos para obrigar que a rota passe por todas as $n$ cidades exatamente uma vez e volte ao início com o menor custo, temos o Problema do Caixeiro-Viajante (\textit{Traveling Salesperson Problem}, TSP). Situação parecida acontece na Cobertura de Vértices (\textit{Vertex Cover}), em que buscamos o menor conjunto de vértices que cubra todas as arestas do grafo, na Cobertura de Conjuntos (\textit{Set Cover}) e no problema de encaixe molecular (\textit{Molecular Docking}) \cite{pagadala2017software,huang2018comprehensive}, onde se busca a posição e a rotação de uma molécula que minimizem a energia de ligação com uma proteína.
 
-Na década de 1970, Cook \cite{cook1971complexity}, Karp \cite{karp1972reducibility} e Levin \cite{levin1973universal} provaram que esses problemas pertencem à classe NP-Completo (na forma de decisão) ou NP-Difícil (na forma de otimização). Todos eles são ligados por reduções em tempo polinomial: se alguém achar um algoritmo polinomial para um deles, todos os outros também terão solução polinomial.
+Na década de 1970, Cook \cite{cook1971complexity}, Karp \cite{karp1972reducibility} e Levin \cite{levin1973universal} provaram que o TSP, a Cobertura de Vértices e a Cobertura de Conjuntos pertencem à classe NP-Completo (na forma de decisão) ou NP-Difícil (na forma de otimização). Todos eles são ligados por reduções em tempo polinomial: se alguém achar um algoritmo polinomial para um deles, todos os outros também terão solução polinomial.
 
 Como não se conhece algoritmo polinomial para nenhum problema NP-Completo, achar a solução ótima exata exige testar um número de combinações que cresce de forma exponencial ($2^n$ subconjuntos na Cobertura de Vértices) ou fatorial ($(n-1)!/2$ rotas no TSP simétrico). Com $n = 100$ cidades no TSP, existem cerca de $4{,}66 \times 10^{155}$ rotas, o que torna a busca exata inviável mesmo nos computadores mais rápidos.
 
@@ -79,7 +79,7 @@ Para contornar esse limite na prática, costumam ser usadas três abordagens:
 
 O objetivo deste trabalho é estudar a base teórica da NP-Completude e comparar na prática o tempo de execução e a qualidade das soluções dessas três abordagens. Os objetivos específicos são: (i) apresentar as classes P, NP, NP-Difícil e NP-Completo, os verificadores polinomiais e a questão $\text{P} \neq \text{NP}$; (ii) demonstrar as reduções da cadeia $\text{CIRCUIT-SAT} \le_P \text{SAT} \le_P \text{3-CNF-SAT} \le_P \text{CLIQUE} \le_P \text{VERTEX-COVER} \le_P \text{HAM-CYCLE} \le_P \text{TSP}$ e o crescimento de $2^n$ e $(n-1)!/2$; (iii) implementar soluções exatas e verificadores para TSP e Cobertura de Vértices; (iv) implementar os algoritmos de aproximação do Capítulo 35 e medir suas razões de aproximação; e (v) aplicar o \textit{Simulated Annealing} ao estudo de caso inspirado em \textit{Molecular Docking}.
 
-O restante do texto está dividido da seguinte forma: a Seção \ref{sec:fundamentacao} traz a fundamentação teórica; a Seção \ref{sec:paradigma} apresenta os pseudocódigos e diagramas dos algoritmos; a Seção \ref{sec:analise} faz a análise assintótica de tempo e espaço e as provas de aproximação; a Seção \ref{sec:estudo_de_caso} mostra a implementação e os testes; a Seção \ref{sec:conclusao} resume as conclusões; e o Apêndice traz o guia rápido (\textit{Cheat Sheet}).
+O restante do texto está dividido da seguinte forma: a Seção \ref{sec:fundamentacao} traz a fundamentação teórica; a Seção \ref{sec:paradigma} apresenta os pseudocódigos e diagramas dos algoritmos; a Seção \ref{sec:analise} faz a análise assintótica de tempo e espaço e as provas de aproximação; a Seção \ref{sec:estudo_de_caso} apresenta o estudo de caso inspirado em \textit{Molecular Docking}; a Seção \ref{sec:conclusao} resume as conclusões; e o Apêndice traz o guia rápido (\textit{Cheat Sheet}).
 
 % ==========================================================================
 % SEÇÃO II - FUNDAMENTAÇÃO TEÓRICA
@@ -91,7 +91,7 @@ O restante do texto está dividido da seguinte forma: a Seção \ref{sec:fundame
 
 Na prática, problemas como o TSP ou a Cobertura de Vértices são de otimização, pois pedem o menor custo ou o menor conjunto possível. Porém, a teoria da NP-Completude do Capítulo 34 de Cormen et al. \cite{cormen2012algoritmos} trabalha com \textbf{problemas de decisão}, cuja resposta é apenas \texttt{SIM} ($1$) ou \texttt{NÃO} ($0$).
 
-Todo problema de otimização pode ser transformado em um problema de decisão colocando um limite $k$ sobre o valor buscado:
+Todo problema de otimização pode ser transformado em um problema de decisão com a inclusão de um limite $k$ sobre o valor buscado:
 \begin{itemize}
     \item \texttt{VERTEX-COVER}: dado um grafo não dirigido $G = (V, E)$ e um inteiro $k$, existe uma cobertura de vértices em $G$ de tamanho no máximo $k$?
     \item \texttt{TSP}: dado um grafo completo $G = (V, E)$, os custos das arestas $c(i, j) \ge 0$ e um inteiro $k$, existe um ciclo hamiltoniano em $G$ com custo total no máximo $k$?
@@ -117,7 +117,7 @@ L = \{ x \in \{0,1\}^* : \exists y \text{ com } |y| = O(|x|^c) \text{ e } A(x, y
 
 Nos algoritmos implementados em \texttt{src/verification/verifier.py}, isso fica claro:
 \begin{itemize}
-    \item Em \texttt{VERTEX-COVER}, o certificado é o subconjunto de vértices $V' \subseteq V$. O verificador confere se $|V'| \le k$ e percorre as arestas $(u, v) \in E$ checando se $u \in V'$ ou $v \in V'$, gastando tempo $O(|V| + |E|)$.
+    \item Em \texttt{VERTEX-COVER}, o certificado é o subconjunto de vértices $V' \subseteq V$. O verificador confere se $|V'| \le k$ e percorre as arestas $(u, v) \in E$ para checar se $u \in V'$ ou $v \in V'$, com tempo total $O(|V| + |E|)$.
     \item Em \texttt{TSP}, o certificado é a sequência de $n$ vértices do ciclo. O verificador checa em $O(n)$ se todos os vértices aparecem uma única vez e se a soma dos pesos das arestas é menor ou igual a $k$.
 \end{itemize}
 
@@ -200,7 +200,7 @@ Saber se $\text{P} = \text{NP}$ ou $\text{P} \neq \text{NP}$ é um problema em a
 
 A maioria dos pesquisadores acredita que $\text{P} \neq \text{NP}$ porque milhares de problemas práticos já foram provados NP-Completos em áreas bem diferentes e, em mais de 50 anos de estudo, nenhum algoritmo exato polinomial foi encontrado para nenhum deles \cite{cormen2012algoritmos}. Além disso, se $\text{P} = \text{NP}$ com um algoritmo prático, haveria duas consequências diretas:
 \begin{enumerate}
-    \item \textit{Criptografia:} algoritmos como RSA e chaves baseadas em logaritmo discreto dependem do fato de que conferir uma chave ou multiplicar primos é rápido ($\text{P}$), enquanto fatorar ou inverter a operação sem a chave é custoso ($\text{NP}$). Se $\text{P} = \text{NP}$, essas chaves poderiam ser quebradas em tempo polinomial.
+    \item \textit{Criptografia:} algoritmos como RSA e chaves baseadas em logaritmo discreto dependem do fato de que multiplicar primos ou conferir uma chave é rápido, enquanto fatorar ou inverter a operação sem a chave não tem algoritmo polinomial conhecido. Esses problemas inversos estão em $\text{NP}$, pois uma resposta é fácil de conferir, embora não se saiba se são NP-Completos. Se $\text{P} = \text{NP}$, eles teriam solução em tempo polinomial e essas chaves poderiam ser quebradas.
     \item \textit{Otimização:} problemas difíceis de logística, escala industrial e acoplamento molecular passariam a ter solução ótima exata em tempo polinomial.
 \end{enumerate}
 
@@ -242,11 +242,11 @@ Com isso, o roteiro de prova no Capítulo 34 de Cormen et al. \cite{cormen2012al
 
 \subsubsection{De $\text{CIRCUIT-SAT}$ para $\text{SAT}$ e $\text{3-CNF-SAT}$}
 
-O primeiro problema NP-Completo da cadeia é a satisfazibilidade de circuitos booleanos (\texttt{CIRCUIT-SAT}, Teorema 34.7 de Cormen et al. \cite{cormen2012algoritmos}). Para mostrar que toda linguagem $L \in \text{NP}$ se reduz a \texttt{CIRCUIT-SAT} (Lema 34.6), considera-se o verificador $A(x, y)$ que roda em tempo $T(n) = O(n^k)$. Em cada etapa da execução, o estado da memória, do contador de programa e dos registradores forma uma configuração $c_i$. Como a passagem de $c_i$ para $c_{i+1}$ é feita pelo hardware usando portas \texttt{AND}, \texttt{OR} e \texttt{NOT} (circuito $M$), basta ligar $T(n)$ cópias de $M$ em sequência, fixar a entrada $x$ e deixar os bits do certificado $y$ como entradas livres. O circuito resultante $C = f(x)$ tem tamanho polinomial e produz saída $1$ se e somente se existir um certificado $y$ tal que $A(x, y) = 1$.
+O primeiro problema NP-Completo da cadeia é a satisfazibilidade de circuitos booleanos (\texttt{CIRCUIT-SAT}, Teorema 34.7 de Cormen et al. \cite{cormen2012algoritmos}). Para mostrar que toda linguagem $L \in \text{NP}$ se reduz a \texttt{CIRCUIT-SAT} (Lema 34.6), considera-se o verificador $A(x, y)$ que roda em tempo $T(n) = O(n^k)$. Em cada etapa da execução, o estado da memória, do contador de programa e dos registradores forma uma configuração $c_i$. Como a passagem de $c_i$ para $c_{i+1}$ é feita pelo hardware por meio de portas \texttt{AND}, \texttt{OR} e \texttt{NOT} (circuito $M$), basta ligar $T(n)$ cópias de $M$ em sequência, fixar a entrada $x$ e deixar os bits do certificado $y$ como entradas livres. O circuito resultante $C = f(x)$ tem tamanho polinomial e produz saída $1$ se e somente se existir um certificado $y$ tal que $A(x, y) = 1$.
 
 Para reduzir $\text{CIRCUIT-SAT} \le_P \text{SAT}$ (Teorema 34.9), não podemos simplesmente substituir as entradas das portas de trás para frente, pois fios com leque de saída (\textit{fan-out}) $\ge 2$ duplicariam subfórmulas e fariam a fórmula crescer de forma exponencial. Em vez disso, cria-se uma variável $x_i$ para cada fio e escreve-se uma cláusula com o operador $\leftrightarrow$ para cada porta (por exemplo, $x_{10} \leftrightarrow (x_7 \land x_8 \land x_9)$ para uma porta \texttt{AND} na Figura 34.10 do livro). A fórmula final é o \texttt{AND} do fio de saída com as cláusulas de todas as portas.
 
-Depois, reduz-se $\text{SAT} \le_P \text{3-CNF-SAT}$ (Teorema 34.10), onde cada cláusula é um \texttt{OR} de exatamente três literais distintos. A conversão é feita em três etapas: (i) monta-se a árvore binária da fórmula criando variáveis $y_i$ nos nós internos para que cada cláusula tenha no máximo 3 variáveis; (ii) usa-se a tabela-verdade de cada cláusula (máximo de $8$ linhas) e as Leis de De Morgan para passá-la para a Forma Normal Conjuntiva (CNF); e (iii) usam-se duas variáveis auxiliares $p$ e $q$ para esticar cláusulas de 1 ou 2 literais (por exemplo, $(l_1 \lor l_2)$ vira $(l_1 \lor l_2 \lor p) \land (l_1 \lor l_2 \lor \neg p)$).
+Depois, reduz-se $\text{SAT} \le_P \text{3-CNF-SAT}$ (Teorema 34.10), onde cada cláusula é um \texttt{OR} de exatamente três literais distintos. A conversão é feita em três etapas: (i) monta-se a árvore binária da fórmula e criam-se variáveis $y_i$ nos nós internos para que cada cláusula tenha no máximo 3 variáveis; (ii) usa-se a tabela-verdade de cada cláusula (máximo de $8$ linhas) e as Leis de De Morgan para passá-la para a Forma Normal Conjuntiva (CNF); e (iii) usam-se duas variáveis auxiliares $p$ e $q$ para esticar cláusulas de 1 ou 2 literais (por exemplo, $(l_1 \lor l_2)$ vira $(l_1 \lor l_2 \lor p) \land (l_1 \lor l_2 \lor \neg p)$).
 
 \subsubsection{Redução $\text{3-CNF-SAT} \le_P \text{CLIQUE}$}
 
@@ -259,15 +259,15 @@ O problema $\text{CLIQUE}$ é NP-Completo.
 \begin{proof}
 Primeiro, $\text{CLIQUE} \in \text{NP}$: dado o conjunto $V'$ como certificado, confere-se se $|V'| = k$ e se toda dupla $u, v \in V'$ tem aresta em $E$ em tempo $O(|V|^2)$.
 
-Para reduzir $\text{3-CNF-SAT} \le_P \text{CLIQUE}$, seja $\phi = C_1 \land C_2 \land \dots \land C_k$ uma fórmula em 3-CNF em que cada cláusula é $C_r = (l_1^r \lor l_2^r \lor l_3^r)$. Construímos o grafo $G = (V, E)$ assim:
+Para reduzir $\text{3-CNF-SAT} \le_P \text{CLIQUE}$, seja $\phi = C_1 \land C_2 \land \dots \land C_k$ uma fórmula em 3-CNF em que cada cláusula é $C_r = (l_1^r \lor l_2^r \lor l_3^r)$. Construímos o grafo $G = (V, E)$ assim (Figura~\ref{fig:exemplo_3sat_clique}):
 \begin{itemize}
     \item Para cada cláusula $C_r$, colocamos uma tripla de vértices $V_r = \{v_1^r, v_2^r, v_3^r\}$ em $V$ ($3k$ vértices ao todo).
     \item Colocamos uma aresta entre $v_i^r$ e $v_j^s$ se: (a) eles estão em triplas diferentes ($r \neq s$); e (b) seus literais são coerentes, isto é, $l_i^r$ não é a negação de $l_j^s$ ($l_i^r \neq \neg l_j^s$).
 \end{itemize}
 Essa construção testa os pares entre os $3k$ vértices e roda em tempo polinomial $O(k^2)$. Resta provar a equivalência:
 \begin{itemize}
-    \item \textit{Ida ($\implies$):} Se $\phi$ tem uma atribuição que a satisfaz, cada cláusula $C_r$ tem pelo menos um literal verdadeiro $l_i^r = 1$. Escolhendo um vértice verdadeiro $v_i^r$ de cada tripla, formamos $V'$ com $k$ vértices. Como dois vértices de $V'$ têm literais iguais a $1$ na mesma atribuição, um não pode ser a negação do outro. Logo, todos os pares em $V'$ têm aresta em $E$, formando um clique de tamanho $k$.
-    \item \textit{Volta ($\impliedby$):} Se $G$ tem um clique $V'$ de tamanho $k$, como não há arestas dentro da mesma tripla $V_r$, $V'$ tem exatamente um vértice de cada uma das $k$ triplas. Como os vértices de $V'$ são todos ligados entre si, nenhum literal de $V'$ é a negação de outro, permitindo atribuir $1$ a todos os literais de $V'$ sem conflito e satisfazer $\phi$.
+    \item \textit{Ida ($\implies$):} Se $\phi$ tem uma atribuição que a satisfaz, cada cláusula $C_r$ tem pelo menos um literal verdadeiro $l_i^r = 1$. Ao escolher um vértice verdadeiro $v_i^r$ de cada tripla, formamos $V'$ com $k$ vértices. Como dois vértices de $V'$ têm literais iguais a $1$ na mesma atribuição, um não pode ser a negação do outro. Logo, todos os pares em $V'$ têm aresta em $E$ e formam um clique de tamanho $k$.
+    \item \textit{Volta ($\impliedby$):} Se $G$ tem um clique $V'$ de tamanho $k$, como não há arestas dentro da mesma tripla $V_r$, $V'$ tem exatamente um vértice de cada uma das $k$ triplas. Como os vértices de $V'$ são todos ligados entre si, nenhum literal de $V'$ é a negação de outro. Assim, é possível atribuir $1$ a todos os literais de $V'$ sem conflito e satisfazer $\phi$.
 \end{itemize}
 \end{proof}
 
@@ -327,7 +327,7 @@ O problema $\text{VERTEX-COVER}$ é NP-Completo.
 Já vimos que $\text{VERTEX-COVER} \in \text{NP}$. Dada uma instância $(G, k)$ de \texttt{CLIQUE}, calcula-se o complemento $\overline{G}$ em $O(|V|^2)$ e gera-se a instância $(\overline{G}, |V| - k)$ de \texttt{VERTEX-COVER}:
 \begin{itemize}
     \item \textit{Ida ($\implies$):} Se $V'$ é um clique de tamanho $k$ em $G$, então para toda aresta $(u, v) \in \overline{E}$ vale $(u, v) \notin E$. Logo, $u$ e $v$ não podem estar ambos em $V'$, ou seja, pelo menos um deles pertence a $V \setminus V'$. Assim, $V \setminus V'$ cobre todas as arestas de $\overline{E}$ e tem tamanho $|V| - k$.
-    \item \textit{Volta ($\impliedby$):} Se $V'$ é uma cobertura de tamanho $|V| - k$ em $\overline{G}$, então para toda dupla $u, v \in V \setminus V'$ a aresta $(u, v)$ não pode estar em $\overline{E}$ (pois não teria ponta em $V'$). Logo, $(u, v) \in E$ e $V \setminus V'$ é um clique de tamanho $k$ em $G$.
+    \item \textit{Volta ($\impliedby$):} Se $V'$ é uma cobertura de tamanho $|V| - k$ em $\overline{G}$, então para toda dupla $u, v \in V \setminus V'$ a aresta $(u, v)$ não pode estar em $\overline{E}$ (pois não teria extremidade em $V'$). Logo, $(u, v) \in E$ e $V \setminus V'$ é um clique de tamanho $k$ em $G$.
 \end{itemize}
 \end{proof}
 
@@ -379,17 +379,17 @@ Já vimos que $\text{VERTEX-COVER} \in \text{NP}$. Dada uma instância $(G, k)$ 
 \label{fig:exemplo_clique_vc}
 \end{figure}
 
-Em seguida, o Teorema 34.13 reduz $\text{VERTEX-COVER} \le_P \text{HAM-CYCLE}$ trocando cada aresta $(u, v) \in E$ por um \textit{widget} $W_{uv}$ de $12$ vértices ligado a $k$ vértices seletores $s_1, \dots, s_k$. Por fim, o Teorema 34.14 prova que $\text{HAM-CYCLE} \le_P \text{TSP}$: dado $G = (V, E)$, monta-se o grafo completo $G'$ com custo $c(i, j) = 0$ se $(i, j) \in E$ e $c(i, j) = 1$ se $(i, j) \notin E$, e limite $k = 0$. Assim, $G$ tem ciclo hamiltoniano se e somente se $G'$ tem percurso de custo $0$.
+Em seguida, o Teorema 34.13 reduz $\text{VERTEX-COVER} \le_P \text{HAM-CYCLE}$ ao trocar cada aresta $(u, v) \in E$ por um \textit{widget} $W_{uv}$ de $12$ vértices ligado a $k$ vértices seletores $s_1, \dots, s_k$. Por fim, o Teorema 34.14 prova que $\text{HAM-CYCLE} \le_P \text{TSP}$: dado $G = (V, E)$, monta-se o grafo completo $G'$ com custo $c(i, j) = 0$ se $(i, j) \in E$ e $c(i, j) = 1$ se $(i, j) \notin E$, e limite $k = 0$. Assim, $G$ tem ciclo hamiltoniano se e somente se $G'$ tem percurso de custo $0$.
 
 \subsection{Explosão Combinatória}
 
 A dificuldade prática dos algoritmos de força bruta vem da quantidade de combinações possíveis:
 \begin{enumerate}
-    \item \textit{Cobertura de Vértices ($2^n$):} Como cada um dos $n = |V|$ vértices pode entrar ou não no subconjunto, o total de subconjuntos é $\sum_{k=0}^{n} \binom{n}{k} = 2^n$, levando a $O(2^n \cdot |E|)$.
-    \item \textit{Caixeiro-Viajante ($(n-1)!/2$):} Fixando a primeira cidade entre as $n!$ permutações ($n!/n = (n-1)!$) e dividindo por $2$ porque o sentido horário e anti-horário têm o mesmo custo em grafos simétricos, existem $\frac{(n-1)!}{2}$ rotas.
+    \item \textit{Cobertura de Vértices ($2^n$):} Como cada um dos $n = |V|$ vértices pode entrar ou não no subconjunto, o total de subconjuntos é $\sum_{k=0}^{n} \binom{n}{k} = 2^n$, o que leva a $O(2^n \cdot |E|)$.
+    \item \textit{Caixeiro-Viajante ($(n-1)!/2$):} Com a primeira cidade fixa, as $n!$ permutações se reduzem a $n!/n = (n-1)!$. Como o sentido horário e o anti-horário têm o mesmo custo em grafos simétricos, esse número cai pela metade, e existem $\frac{(n-1)!}{2}$ rotas.
 \end{enumerate}
 
-Aumentar a velocidade do processador ajuda pouco quando o algoritmo é exponencial. Se um algoritmo de tempo $2^n$ passa a rodar em um computador $1.000$ vezes mais rápido, o novo tamanho resolvido no mesmo tempo é $2^{n'} = 1000 \cdot 2^n \implies n' = n + \log_2(1000) \approx n + 10$. Ou seja, ganham-se apenas 10 vértices. A Tabela \ref{tab:crescimento_combinatorio} mostra o tempo estimado em um processador de $10^9$ operações por segundo. Quando $n$ cresce, usam-se algoritmos de aproximação com razão $\max(C/C^*, C^*/C) \le \rho(n)$ (Cap. 35 \cite{cormen2012algoritmos}) ou metaheurísticas como o \textit{Simulated Annealing}.
+Aumentar a velocidade do processador ajuda pouco quando o algoritmo é exponencial. Se um algoritmo de tempo $2^n$ passa a rodar em um computador $1.000$ vezes mais rápido, o novo tamanho resolvido no mesmo tempo é $2^{n'} = 1{.}000 \cdot 2^n \implies n' = n + \log_2(1000) \approx n + 10$. Ou seja, ganham-se apenas 10 vértices. A Tabela \ref{tab:crescimento_combinatorio} mostra o tempo estimado em um processador de $10^9$ operações por segundo. Quando $n$ cresce, usam-se algoritmos de aproximação com razão $\max(C/C^*, C^*/C) \le \rho(n)$ (Cap. 35 \cite{cormen2012algoritmos}) ou metaheurísticas como o \textit{Simulated Annealing}.
 
 \begin{table}[htbp]
 \centering
@@ -424,7 +424,7 @@ A Seção~\ref{sec:fundamentacao} mostrou por que não se espera um algoritmo ex
 
 \subsubsection{\textit{Branch-and-Bound} para a Cobertura de Vértices}
 
-O método parte de uma propriedade da cobertura de vértices. Para qualquer aresta $(u,v)$ ainda descoberta, a cobertura precisa conter $u$ ou $v$. Assim, a busca gera dois ramos, um com $u$ e outro com $v$. Para não explorar ramos que não podem melhorar a resposta, o algoritmo mantém a melhor cobertura encontrada e descarta (poda) todo ramo que atinge o mesmo número de vértices dela. Qualquer cobertura válida serve como limitante inicial. No pseudocódigo usamos a resposta do \texttt{APPROX-VERTEX-COVER} (Algoritmo~\ref{alg:approx_vc}), que é rápida. O código da equipe usa outro método guloso, que escolhe sempre o vértice de maior grau, e o resto da busca é igual.
+O método parte de uma propriedade da cobertura de vértices. Para qualquer aresta $(u,v)$ ainda descoberta, a cobertura precisa conter $u$ ou $v$. Assim, a busca gera dois ramos, um com $u$ e outro com $v$. Para não explorar ramos que não podem melhorar a resposta, o algoritmo mantém a melhor cobertura encontrada e descarta (poda) todo ramo que atinge o mesmo número de vértices dela. Qualquer cobertura válida serve como limitante inicial. No pseudocódigo (Algoritmo~\ref{alg:bb_vc}) usamos a resposta do \texttt{APPROX-VERTEX-COVER} (Algoritmo~\ref{alg:approx_vc}), que é rápida. O código da equipe usa outro método guloso, que escolhe sempre o vértice de maior grau, e o resto da busca é igual.
 
 \begin{algorithm}[htbp]
 \caption{\texttt{BB-VERTEX-COVER}$(G)$}
@@ -571,7 +571,7 @@ A Figura~\ref{fig:fluxo_vc} mostra o laço como fluxograma e a Figura~\ref{fig:p
 
 \subsubsection{\texttt{APPROX-TSP-TOUR}}
 
-Este algoritmo só tem garantia quando os custos obedecem à \textit{desigualdade triangular}, $c(u,w) \le c(u,v) + c(v,w)$. Ou seja, o caminho direto de $u$ até $w$ nunca custa mais do que um caminho com parada intermediária em $v$, como ocorre com distâncias em linha reta. O algoritmo constrói a Árvore Geradora Mínima (MST), percorre essa árvore em pré-ordem e visita as cidades na ordem da primeira visita, com retorno à cidade inicial ao final.
+Este algoritmo só tem garantia quando os custos obedecem à \textit{desigualdade triangular}, $c(u,w) \le c(u,v) + c(v,w)$. Ou seja, o caminho direto de $u$ até $w$ nunca custa mais do que um caminho com parada intermediária em $v$, como ocorre com distâncias em linha reta. O Algoritmo~\ref{alg:approx_tsp} constrói a Árvore Geradora Mínima (MST), percorre essa árvore em pré-ordem e visita as cidades na ordem da primeira visita, com retorno à cidade inicial ao final.
 
 \begin{algorithm}[htbp]
 \caption{\texttt{APPROX-TSP-TOUR}$(G, c)$ \cite{cormen2012algoritmos}}
@@ -618,7 +618,7 @@ Observe o trecho de $f$ para $e$ na Figura~\ref{fig:passos_tsp}(b). Na árvore, 
 
 \subsubsection{\texttt{GREEDY-SET-COVER}}
 
-Na Cobertura de Conjuntos, a entrada é um conjunto $X$ e uma família $\mathcal{F}$ de subconjuntos de $X$. O algoritmo guloso escolhe, a cada rodada, o subconjunto que cobre o \textit{maior número de elementos ainda descobertos}.
+Na Cobertura de Conjuntos, a entrada é um conjunto $X$ e uma família $\mathcal{F}$ de subconjuntos de $X$. O algoritmo guloso (Algoritmo~\ref{alg:greedy_sc}) escolhe, a cada rodada, o subconjunto que cobre o \textit{maior número de elementos ainda descobertos}.
 
 \begin{algorithm}[htbp]
 \caption{\texttt{GREEDY-SET-COVER}$(X, \mathcal{F})$ \cite{cormen2012algoritmos}}
@@ -901,7 +901,7 @@ Nos algoritmos exatos e verificadores, ficou evidente a diferença entre verific
 
 Já os algoritmos de aproximação rodaram em microssegundos e mantiveram o erro dentro dos limites teóricos do Capítulo 35: no \texttt{APPROX-VERTEX-COVER} ($\rho = 2$), a razão média ficou entre $1{,}42$ e $1{,}70$; no \texttt{APPROX-TSP-TOUR} ($\rho = 2$ com desigualdade triangular), as rotas ficaram em média de $8\%$ a $20\%$ acima do ótimo; e no \texttt{GREEDY-SET-COVER} ($\rho = H(d)$), a razão média ficou entre $1{,}00$ e $1{,}06$.
 
-Por fim, no problema contínuo inspirado em \textit{Molecular Docking} \cite{pagadala2017software,huang2018comprehensive}, o \textit{Simulated Annealing} dependeu diretamente do orçamento de avaliações $B$. Com poucas avaliações ($B = 100$) e passos locais curtos ($\sigma = 0{,}6$), o algoritmo explora pouco além da vizinhança da pose inicial e perde em média para a busca aleatória, que sorteia pontos por todo o espaço. Já para $B \ge 10.000$, o resfriamento gradual e o refinamento local permitiram sair de mínimos locais e superar a busca aleatória em até $29$ das $30$ execuções ($p \le 3{,}3 \times 10^{-4}$). A Tabela \ref{tab:resumo_aplicabilidade} resume onde cada método se aplica.
+Por fim, no problema contínuo inspirado em \textit{Molecular Docking} \cite{pagadala2017software,huang2018comprehensive}, o \textit{Simulated Annealing} dependeu diretamente do orçamento de avaliações $B$. Com poucas avaliações ($B = 100$) e passos locais curtos (desvio padrão $0{,}6$), o algoritmo explora pouco além da vizinhança da pose inicial e perde em média para a busca aleatória, que sorteia pontos por todo o espaço. Já para $B \ge 10.000$, o resfriamento gradual e o refinamento local permitiram sair de mínimos locais e superar a busca aleatória em até $29$ das $30$ execuções ($p \le 3{,}3 \times 10^{-4}$). A Tabela \ref{tab:resumo_aplicabilidade} resume onde cada método se aplica.
 
 \begin{table}[htbp]
 \centering
@@ -969,8 +969,8 @@ Quando um problema tem verificação rápida em tempo polinomial ($\text{NP}$), 
 \midrule
 Verificador Vertex Cover & $O(|V| + |E|)$ & $O(|V|)$ & Exata (Decisão) \\
 Verificador TSP & $O(n)$ & $O(n)$ & Exata (Decisão) \\
-Vertex Cover (Força Bruta) & $O(2^n \cdot |E|)$ & $O(n)$ & Ótimo ($C^*$) \\
-Vertex Cover (Branch-and-Bound) & $O(2^k \cdot |E|)$ & $O(n)$ & Ótimo ($C^*$) \\
+Vertex Cover (Força Bruta) & $O(2^{|V|} \cdot |E|)$ & $O(|V|)$ & Ótimo ($C^*$) \\
+Vertex Cover (Branch-and-Bound) & $O(2^k \cdot |E|)$ & $O(|V|)$ & Ótimo ($C^*$) \\
 TSP (Força Bruta) & $\Theta((n-1)! \cdot n)$ & $O(n)$ & Ótimo ($C^*$) \\
 TSP (Held-Karp / PD) & $\Theta(n^2 2^n)$ & $\Theta(n 2^n)$ & Ótimo ($C^*$) \\
 \texttt{APPROX-VERTEX-COVER} & $O(|V| + |E|)$ & $O(|V|)$ & $\rho = 2$ \\
