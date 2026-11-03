@@ -10,12 +10,12 @@ Repositório acadêmico contendo o desenvolvimento teórico, formal, analítico 
 - **Instituição:** Centro Federal de Educação Tecnológica de Minas Gerais (CEFET-MG)  
 - **Departamento:** Departamento de Computação e Mecânica (DECOM-DV)  
 - **Disciplina:** Estratégias Avançadas de Projeto e Análise de Algoritmos  
-- **Professor:** Michel Pires da Silva  
-- **Autores:** Kairo Henrique, Heitor Henrique, Jade Souza, Igor e Maria Eduarda  
+- **Professor:** Prof. Dr. Michel Pires da Silva  
+- **Autores:** Kairo Henrique Ferreira Martins, Igor Moreira Lopes, Jade Giulia Januaria de Souza, Heitor Henrique Zonho e Maria Eduarda Alves Barbosa  
 
 ---
 
-## 📌 Visão Geral e Motivação Teórica
+## Visão Geral e Motivação Teórica
 
 O cerne deste trabalho é investigar os limites da computabilidade eficiente e as estratégias práticas para lidar com a intratabilidade computacional inerente aos problemas NP-Completos e NP-Difíceis.
 
@@ -37,7 +37,7 @@ Isso inviabiliza algoritmos exatos em tempo clínico hábil, exigindo algoritmos
 
 ---
 
-## ⚙️ Módulos e Algoritmos Implementados
+## Módulos e Algoritmos Implementados
 
 ### 1. Algoritmos Exatos
 * **Vertex Cover (Cobertura de Vértices):**
@@ -61,7 +61,7 @@ Isso inviabiliza algoritmos exatos em tempo clínico hábil, exigindo algoritmos
 
 ---
 
-## 📊 Tabela Consolidada de Complexidades
+## Tabela Consolidada de Complexidades
 
 | Módulo / Algoritmo | Paradigma | Tempo (Pior Caso) | Tempo (Melhor/Médio) | Espaço Auxiliar | Garantia / Observação |
 |---|---|---|---|---|---|
@@ -78,7 +78,7 @@ Isso inviabiliza algoritmos exatos em tempo clínico hábil, exigindo algoritmos
 
 ---
 
-## 📈 A Parede Exponencial: Teoria vs Resultados Empíricos
+## A Parede Exponencial: Teoria vs Resultados Empíricos
 
 ### 1. Projeção Teórica (Processador a 1 GHz = $10^9$ operações por segundo)
 
@@ -105,7 +105,7 @@ Isso inviabiliza algoritmos exatos em tempo clínico hábil, exigindo algoritmos
 
 ---
 
-## 🗂️ Estrutura de Arquivos
+## Estrutura de Arquivos
 
 ```text
 .
@@ -138,6 +138,7 @@ Isso inviabiliza algoritmos exatos em tempo clínico hábil, exigindo algoritmos
 ├── benchmarks/
 │   ├── benchmark_exact.py                 # Medição progressiva dos algoritmos exatos
 │   ├── demo_combinatorial_explosion.py   # Script de demonstração ao vivo para o seminário
+│   ├── plot_combinatorial_explosion.py    # Geração dos gráficos de explosão combinatória
 │   ├── benchmark_approximation.py         # Avaliação de razão empírica vs fator teórico
 │   ├── benchmark_simulated_annealing.py   # Desempenho e curvas de energia do Annealing
 │   ├── tune_simulated_annealing.py        # Ajuste sistemático de hiperparâmetros
@@ -150,9 +151,9 @@ Isso inviabiliza algoritmos exatos em tempo clínico hábil, exigindo algoritmos
 │   ├── slides_aproximacoes.md             # Slides Marp: Algoritmos de Aproximação
 │   └── roteiro_apresentacao_heitor.md     # Roteiro de fala cronometrado: Aproximações
 ├── relatorio/
-│   ├── main.tex                           # Artigo científico em LaTeX no padrão IEEEtran
+│   ├── artigo.tex                         # Artigo científico em LaTeX no padrão IEEEtran
 │   ├── referencias.bib                    # Base bibliográfica BibTeX
-│   └── main.pdf                           # PDF compilado do relatório
+│   └── artigo.pdf                         # PDF compilado do artigo técnico-científico
 ├── docs/
 │   ├── pratica.pdf                        # Enunciado do trabalho prático
 │   ├── estudo_de_caso_docking.md          # Modelagem detalhada do Molecular Docking
@@ -164,7 +165,7 @@ Isso inviabiliza algoritmos exatos em tempo clínico hábil, exigindo algoritmos
 
 ---
 
-## 💻 Instalação e Execução
+## Instalação e Execução
 
 ### 1. Clonar o Repositório
 ```bash
@@ -191,7 +192,7 @@ pip install -r requirements.txt
 
 ---
 
-## 🧪 Testes Automatizados (101 Testes)
+## Testes Automatizados (101 Testes)
 
 A integridade do código e a correção matemática dos algoritmos são validadas por **101 testes unitários**:
 
@@ -201,7 +202,7 @@ pytest -v
 
 ---
 
-## 🚀 Execução dos Experimentos e Demonstrações
+## Execução dos Experimentos e Demonstrações
 
 ### 1. Demonstração Interativa ao Vivo (Seminário)
 Demonstração no terminal comparando o tempo real do Held-Karp contra a Força Bruta e executando os verificadores polinomiais:
@@ -209,11 +210,12 @@ Demonstração no terminal comparando o tempo real do Held-Karp contra a Força 
 python benchmarks/demo_combinatorial_explosion.py
 ```
 
-### 2. Benchmarks dos Algoritmos Exatos
+### 2. Benchmarks dos Algoritmos Exatos e Explosão Combinatória
 ```bash
 python benchmarks/benchmark_exact.py
+python benchmarks/plot_combinatorial_explosion.py
 ```
-*Gera os gráficos `benchmarks/plots/benchmark_tsp.png` e `benchmarks/plots/benchmark_vertex_cover.png`.*
+*Gera os gráficos `benchmarks/plots/benchmark_tsp.png`, `benchmarks/plots/benchmark_vertex_cover.png` e `benchmarks/plots/explosao_combinatoria_demonstracao.png`.*
 
 ### 3. Benchmarks dos Algoritmos de Aproximação
 ```bash
@@ -230,16 +232,16 @@ python benchmarks/tune_simulated_annealing.py
 
 ---
 
-## 📄 Relatório Técnico (LaTeX IEEEtran)
+## Artigo Técnico-Científico (LaTeX IEEEtran)
 
 O relatório técnico-científico está configurado no padrão IEEE (`IEEEtran`), disponível em [`relatorio/`](relatorio/):
 
 ```bash
 cd relatorio
-pdflatex main.tex
-bibtex main
-pdflatex main.tex
-pdflatex main.tex
+pdflatex artigo.tex
+bibtex artigo
+pdflatex artigo.tex
+pdflatex artigo.tex
 ```
 
 

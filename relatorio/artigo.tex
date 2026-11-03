@@ -32,6 +32,7 @@
 \usepackage{booktabs}
 \usepackage{array}
 \usepackage{xcolor}
+\usepackage{url}
 \usepackage{tikz}
 \usetikzlibrary{arrows.meta, positioning, shapes.geometric}
 \usepackage[colorlinks=true, linkcolor=blue!60!black, citecolor=blue!60!black, urlcolor=blue!70!black]{hyperref}
@@ -39,9 +40,55 @@
 \title{Problemas NP-Completos e Aproximações: Fundamentação, Algoritmos Exatos, Aproximados e Metaheurísticas em \textit{Molecular Docking}}
 
 \author{
-\IEEEauthorblockN{Igor, Maria Eduarda, Kairo Henrique, Heitor Henrique e Jade Souza}
-\IEEEauthorblockA{Departamento de Computação e Mecânica (DECOM-DV) -- CEFET-MG, Divinópolis, MG \\
-Estratégias Avançadas de Projeto e Análise de Algoritmos (Prof. Michel Pires da Silva)}
+
+\IEEEauthorblockN{Kairo Henrique Ferreira Martins}
+\IEEEauthorblockA{
+Engenharia de Computação\\
+CEFET-MG\\
+Divinópolis, Brasil\\
+kairohenrique293@gmail.com
+}
+
+\\
+
+\IEEEauthorblockN{Igor Moreira Lopes}
+\IEEEauthorblockA{
+Engenharia de Computação\\
+CEFET-MG\\
+Divinópolis, Brasil\\
+igor.moreira.lopes22@gmail.com
+}
+
+\and
+
+\IEEEauthorblockN{Jade Giulia Januaria de Souza}
+\IEEEauthorblockA{
+Engenharia de Computação\\
+CEFET-MG\\
+Divinópolis, Brasil\\
+jadegiulia3817@gmail.com
+}
+
+\\
+
+\IEEEauthorblockN{Heitor Henrique Zonho}
+\IEEEauthorblockA{
+Engenharia de Computação\\
+CEFET-MG\\
+Divinópolis, Brasil\\
+heitorzonho81388@gmail.com
+}
+
+\and
+
+\IEEEauthorblockN{Maria Eduarda Alves Barbosa}
+\IEEEauthorblockA{
+Engenharia de Computação\\
+CEFET-MG\\
+Divinópolis, Brasil\\
+mariaeduardaalvesbarbosa13@gmail.com
+}
+
 }
 
 \begin{document}
@@ -413,7 +460,7 @@ $100$ & $10{,}0\ \mu\text{s}$ & $4{,}0 \times 10^{13}\text{ anos}$ & $4{,}0 \tim
 \end{table}
 
 % ==========================================================================
-% SEÇÃO III - O PARADIGMA ALGORÍTMICO (PESSOA 2 - ISSUE #5)
+% SEÇÃO III - O PARADIGMA ALGORÍTMICO
 % ==========================================================================
 \section{O Paradigma Algorítmico (Engenharia da Solução)}
 \label{sec:paradigma}
@@ -654,7 +701,7 @@ Rodada & $U$ antes & $|A \cap U|$ & $|B \cap U|$ & $|D \cap U|$ & Escolhe \\
 \end{table}
 
 % ==========================================================================
-% SEÇÃO IV - ANÁLISE ASSINTÓTICA RIGOROSA (PESSOA 2 - ISSUE #6)
+% SEÇÃO IV - ANÁLISE ASSINTÓTICA RIGOROSA
 % ==========================================================================
 \section{Análise Assintótica Rigorosa (Custos)}
 \label{sec:analise}
@@ -771,14 +818,12 @@ No exemplo da Tabela~\ref{tab:passos_sc}, o maior conjunto tem $d = 4$, então a
 Quando nenhuma garantia desse tipo é conhecida, como no \textit{Molecular Docking}, que é um problema contínuo, a alternativa são as metaheurísticas da Seção~\ref{sec:estudo_de_caso}. Elas costumam encontrar boas soluções na prática, mas não oferecem prova de proximidade do ótimo.
 
 % ==========================================================================
-% SEÇÃO V - ESTUDO DE CASO E IMPLEMENTAÇÃO PRÁTICA (PESSOA 2 E 5)
+% SEÇÃO V - ESTUDO DE CASO E IMPLEMENTAÇÃO PRÁTICA
 % ==========================================================================
 \section{Estudo de Caso e Implementação Prática}
 \label{sec:estudo_de_caso}
 
-% Seção reservada para a Pessoa 2 (Maria Eduarda) e Pessoa 5 (Jade).
-
-Esta seção aplica as ideias anteriores a um problema contínuo inspirado em \textit{Molecular Docking}, a busca pela posição e pela orientação de uma molécula pequena, o ligante, em relação a um alvo~\cite{pagadala2017software}. O modelo é educacional e simplificado. Ele não calcula afinidade química real, mas preserva a dificuldade central do problema, que é um espaço de busca contínuo com muitos mínimos locais. A documentação completa do modelo está no repositório da equipe.
+Esta seção aplica as ideias anteriores a um problema contínuo inspirado em \textit{Molecular Docking}, a busca pela posição e pela orientação de uma molécula pequena, o ligante, em relação a um alvo~\cite{pagadala2017software}. O modelo é educacional e simplificado. Ele não calcula afinidade química real, mas preserva a dificuldade central do problema, que é um espaço de busca contínuo com muitos mínimos locais. A documentação completa do modelo, os códigos-fonte dos algoritmos e os scripts dos experimentos computacionais estão disponíveis publicamente no repositório do projeto~\cite{repo2026np}.
 
 \subsection{Modelo do Problema}
 \label{subsec:modelo}
@@ -903,6 +948,8 @@ Já os algoritmos de aproximação rodaram em microssegundos e mantiveram o erro
 
 Por fim, no problema contínuo inspirado em \textit{Molecular Docking} \cite{pagadala2017software,huang2018comprehensive}, o \textit{Simulated Annealing} dependeu diretamente do orçamento de avaliações $B$. Com poucas avaliações ($B = 100$) e passos locais curtos (desvio padrão $0{,}6$), o algoritmo explora pouco além da vizinhança da pose inicial e perde em média para a busca aleatória, que sorteia pontos por todo o espaço. Já para $B \ge 10.000$, o resfriamento gradual e o refinamento local permitiram sair de mínimos locais e superar a busca aleatória em até $29$ das $30$ execuções ($p \le 3{,}3 \times 10^{-4}$). A Tabela \ref{tab:resumo_aplicabilidade} resume onde cada método se aplica.
 
+Como trabalhos futuros, destacam-se a extensão do modelo de \textit{docking} para conformações tridimensionais no $\mathbb{R}^3$ com rotação de ligações químicas internas e campos de força semiempíricos (como potenciais de Lennard-Jones e Coulomb), a investigação de esquemas de aproximação polinomiais (PTAS/FPTAS) para outros problemas da classe NP-Difícil, bem como a hibridização do \textit{Simulated Annealing} com refinamento local por gradiente contínuo (ex.: L-BFGS) e aceleração paralela de cadeias de Markov em GPU.
+
 \begin{table}[htbp]
 \centering
 \caption{Resumo de onde cada abordagem funciona e onde falha.}
@@ -923,7 +970,7 @@ Por fim, no problema contínuo inspirado em \textit{Molecular Docking} \cite{pag
 \bibliography{referencias}
 
 % ==========================================================================
-% APÊNDICE - CHEAT SHEET (PESSOA 2 - ISSUE #7)
+% APÊNDICE - CHEAT SHEET
 % ==========================================================================
 \appendices
 \section{Cheat Sheet: Guia de Consulta Rápida}
