@@ -145,11 +145,6 @@ Isso inviabiliza algoritmos exatos em tempo clínico hábil, exigindo algoritmos
 │   ├── analyze_simulated_annealing_tuning.py # Análise estatística dos experimentos
 │   ├── results/                           # Dados brutos em formato CSV
 │   └── plots/                             # Gráficos em alta resolução
-├── slides/
-│   ├── slides_algoritmos_exatos.md       # Slides Marp: Algoritmos Exatos e Intratabilidade
-│   ├── roteiro_apresentacao_kairo.md      # Roteiro de fala cronometrado: Algoritmos Exatos
-│   ├── slides_aproximacoes.md             # Slides Marp: Algoritmos de Aproximação
-│   └── roteiro_apresentacao_heitor.md     # Roteiro de fala cronometrado: Aproximações
 ├── relatorio/
 │   ├── artigo.tex                         # Artigo científico em LaTeX no padrão IEEEtran
 │   ├── referencias.bib                    # Base bibliográfica BibTeX

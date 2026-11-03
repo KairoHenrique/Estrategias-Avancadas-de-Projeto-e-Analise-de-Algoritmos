@@ -72,3 +72,7 @@ venv.bak/
 *.out
 *.synctex.gz
 *.toc
+
+# Apresentação / Slides locais
+slides/
+local_igor/
